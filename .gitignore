@@ -1,0 +1,9 @@
+echo "recordings/" >> .gitignore
+echo "transcripts/" >> .gitignore
+echo "temp_chunks/" >> .gitignore
+echo ".env" >> .gitignore
+echo "__pycache__/" >> .gitignorerecordings/
+transcripts/
+temp_chunks/
+.env
+__pycache__/
