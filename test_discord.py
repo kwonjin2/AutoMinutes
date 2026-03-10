@@ -17,7 +17,7 @@ def test_send_file(file_path):
 
     print(f"📡 디스코드로 전송 시도 중: {file_path}")
     
-    header = "🧪 **디스코드 파일 전송 테스트"
+    header = "🧪 **📋 오늘의 프로젝트 회의 요약 (Mentor AI)"
     
     try:
         with open(file_path, "rb") as f:

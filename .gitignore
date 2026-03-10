@@ -7,3 +7,10 @@ transcripts/
 temp_chunks/
 .env
 __pycache__/
+whisper.cpp/
+recordings/
+transcripts/
+archived/
+*.wav
+.env
+.DS_Store
