@@ -9,4 +9,4 @@ temp_chunks/
 __pycache__/
 .DS_Store
 
-.env
+.envteam_wiki_tmp/

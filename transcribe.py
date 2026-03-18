@@ -1,5 +1,8 @@
 # 1. python3 transcribe.py
 # 2. python3 summarize.py
+# 3. python3 discord.py
+# 4. python3 notion.py
+# 4. python3 github_wiki.py
 import os
 import subprocess
 import json
