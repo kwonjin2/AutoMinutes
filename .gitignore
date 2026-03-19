@@ -1,14 +1,32 @@
-whisper.cpp/
+# OS
+.DS_Store
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python (Legacy)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.env.*
+!.env.example
+
+# Project specific
+whisper.cpp/
 recordings/
 transcripts/
 archived/
+team_wiki_tmp/
 temp_chunks/
 
+# Media
 *.wav
-__pycache__/
-.DS_Store
-
-.envteam_wiki_tmp/
-
-.env*
+*.flac
