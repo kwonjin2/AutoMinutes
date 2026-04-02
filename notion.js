@@ -155,7 +155,7 @@ async function uploadToNotion(filePath) {
   const today = new Date();
   const pad = (num) => String(num).padStart(2, "0");
   const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-  const pageTitle = `${todayStr} 회의록`;
+  const pageTitle = `20회차 멘토링`; //${todayStr} 회의록
 
   if (TEST_MODE) {
     console.log(
