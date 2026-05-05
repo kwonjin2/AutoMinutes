@@ -78,25 +78,32 @@ function runTranscription() {
     // 2. whisper.cpp 실행 (JSON 출력 모드)
     // whisper.cpp는 결과 파일명 뒤에 자동으로 .json을 붙입니다.
     const outputBase = path.join(OUTPUT_DIR, file.replace(".flac", ""));
+    const jsonFile = outputBase + ".json";
 
-    try {
-      spawnSync(
-        WHISPER_CLI,
-        [
-          "-m",
-          MODEL_PATH,
-          "-f",
-          wavPath,
-          "-l",
-          "ko",
-          "--output-json",
-          "--output-file",
-          outputBase,
-        ],
-        { stdio: "inherit" },
-      );
-    } catch (error) {
-      console.error(`❌ whisper-cli 실행 중 에러: ${error.message}`);
+    // [개선] 이미 JSON 결과가 있다면 전사 과정을 건너뜁니다.
+    if (fs.existsSync(jsonFile)) {
+      console.log(`⏭️ ${file} 전사 결과가 이미 존재하여 건너뜁니다.`);
+    } else {
+      console.log(`🚀 [GPU 가속] ${file} 전사 시작 (Speaker: ${speaker})...`);
+      try {
+        spawnSync(
+          WHISPER_CLI,
+          [
+            "-m",
+            MODEL_PATH,
+            "-f",
+            wavPath,
+            "-l",
+            "ko",
+            "--output-json",
+            "--output-file",
+            outputBase,
+          ],
+          { stdio: "inherit" },
+        );
+      } catch (error) {
+        console.error(`❌ whisper-cli 실행 중 에러: ${error.message}`);
+      }
     }
 
     // 3. 임시 WAV 파일 삭제
@@ -105,7 +112,6 @@ function runTranscription() {
     }
 
     // 4. 생성된 JSON 결과 읽기
-    const jsonFile = outputBase + ".json";
     if (fs.existsSync(jsonFile)) {
       const rawData = fs.readFileSync(jsonFile, "utf-8");
       let data;
@@ -145,10 +151,59 @@ function runTranscription() {
   // 5. 시간순 정렬
   conversationSegments.sort((a, b) => a.start - b.start);
 
-  // 6. 최종 통합 텍스트 파일 생성
+  // 6. 중복 제거 및 환각어 필터링 로직
+  const filteredSegments = [];
+  const TIME_THRESHOLD = 2.0; // 타 화자 간 동일 문장 판단 (2초)
+  const LONG_PHRASE_THRESHOLD = 60.0; // 긴 문장 반복 판단 (60초)
+  const SHORT_PHRASE_THRESHOLD = 5.0; // 짧은 문장(추임새) 반복 판단 (5초)
+  
+  const BANNED_PHRASES = [
+    "감사합니다", "MBC뉴스", "시청해주셔서감사합니다", "구독과좋아요", 
+    "알람설정", "오늘영상은여기까지입니다", "채널고정", "소리가안들려요"
+  ];
+
+  for (const seg of conversationSegments) {
+    const cleanCurr = seg.text.replace(/[\s.?!,]/g, "");
+    
+    // 1. 환각어 필터링
+    if (BANNED_PHRASES.some(phrase => cleanCurr === phrase) || cleanCurr.length <= 1) {
+      continue;
+    }
+
+    // 2. 중복 검사
+    const isDuplicate = filteredSegments.some((prev) => {
+      const timeDiff = Math.abs(prev.start - seg.start);
+      const cleanPrev = prev.text.replace(/[\s.?!,]/g, "");
+
+      // (A) 다른 화자가 비슷한 시간에 같은 말을 하는 경우 (Mic Bleed)
+      if (timeDiff <= TIME_THRESHOLD) {
+        return cleanPrev === cleanCurr || cleanPrev.includes(cleanCurr) || cleanCurr.includes(cleanPrev);
+      }
+
+      // (B) 동일 화자가 반복하는 경우
+      if (prev.speaker === seg.speaker) {
+        // 문장이 길면(10자 이상) 60초 이내 중복 시 제거 (환각 방어)
+        if (cleanCurr.length >= 10 && timeDiff <= LONG_PHRASE_THRESHOLD) {
+          return cleanPrev === cleanCurr || cleanPrev.includes(cleanCurr) || cleanCurr.includes(cleanPrev);
+        }
+        // 문장이 짧으면 5초 이내일 때만 제거 (정상적인 추임새 보호)
+        if (cleanCurr.length < 10 && timeDiff <= SHORT_PHRASE_THRESHOLD) {
+          return cleanPrev === cleanCurr;
+        }
+      }
+
+      return false;
+    });
+
+    if (!isDuplicate) {
+      filteredSegments.push(seg);
+    }
+  }
+
+  // 7. 최종 통합 텍스트 파일 생성
   const combinedPath = path.join(OUTPUT_DIR, "meeting_with_speakers.txt");
   const fd = fs.openSync(combinedPath, "w");
-  for (const seg of conversationSegments) {
+  for (const seg of filteredSegments) {
     fs.writeSync(fd, `[${seg.speaker}]: ${seg.text}\n`);
   }
   fs.closeSync(fd);
