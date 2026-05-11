@@ -28,6 +28,7 @@ function runTranscription() {
 
   if (!fs.existsSync(INPUT_DIR)) {
     console.log(`❌ ${INPUT_DIR} 폴더가 존재하지 않습니다.`);
+    process.exitCode = 1;
     return;
   }
 
@@ -39,12 +40,14 @@ function runTranscription() {
 
   if (flacFiles.length === 0) {
     console.log("❌ recordings 폴더에 분석할 .flac 파일이 없습니다.");
+    process.exitCode = 1;
     return;
   }
 
   // 실행 파일 존재 여부 확인
   if (!fs.existsSync(WHISPER_CLI)) {
     console.log(`❌ whisper-cli 엔진을 찾을 수 없습니다: ${WHISPER_CLI}`);
+    process.exitCode = 1;
     return;
   }
 
@@ -70,6 +73,7 @@ function runTranscription() {
       );
     } catch (error) {
       console.error(`❌ FFmpeg 변환 실패: ${file}`, error.message);
+      process.exitCode = 1;
       continue;
     }
 
@@ -103,6 +107,7 @@ function runTranscription() {
         );
       } catch (error) {
         console.error(`❌ whisper-cli 실행 중 에러: ${error.message}`);
+        process.exitCode = 1;
       }
     }
 
@@ -119,6 +124,7 @@ function runTranscription() {
         data = JSON.parse(rawData);
       } catch (e) {
         console.log(`⚠️ ${jsonFile} 파싱에 실패했습니다.`);
+        process.exitCode = 1;
         continue;
       }
 
@@ -145,6 +151,7 @@ function runTranscription() {
       }
     } else {
       console.log(`⚠️ ${jsonFile} 생성에 실패했습니다.`);
+      process.exitCode = 1;
     }
   }
 

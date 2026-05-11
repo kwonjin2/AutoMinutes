@@ -72,6 +72,7 @@ function updateSidebar(wikiDir, pageNameNoExt) {
 function updateTeamWiki(summaryMdPath) {
   if (!fs.existsSync(summaryMdPath)) {
     console.log(`❌ 요약본 파일을 찾을 수 없습니다: ${summaryMdPath}`);
+    process.exitCode = 1;
     return;
   }
 
@@ -127,6 +128,7 @@ function updateTeamWiki(summaryMdPath) {
     console.log(`✅ Wiki 업데이트 완료: ${wikiFileName}`);
   } catch (e) {
     console.error(`⚠️ 에러 발생:`, e.message);
+    process.exitCode = 1;
   }
 }
 

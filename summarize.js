@@ -28,6 +28,7 @@ async function runSummarization() {
       console.log(
         `❌ ${transcriptPath} 파일이 존재하지 않습니다. 먼저 transcribe를 진행해주세요.`,
       );
+      process.exitCode = 1;
       return;
     }
 
@@ -58,6 +59,7 @@ async function runSummarization() {
     archiveAndCleanup();
   } catch (e) {
     console.error(`❌ 에러 발생:`, e);
+    process.exitCode = 1;
   }
 }
 

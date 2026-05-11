@@ -82,6 +82,7 @@ function createTimetableTable(rows) {
 async function uploadToNotion(filePath) {
   if (!fs.existsSync(filePath)) {
     console.log(`❌ 파일을 찾을 수 없습니다: ${filePath}`);
+    process.exitCode = 1;
     return;
   }
 
@@ -167,6 +168,7 @@ async function uploadToNotion(filePath) {
 
   if (!notion) {
     console.log("❌ NOTION_TOKEN 또는 DATABASE_ID가 .env에 존재하지 않습니다.");
+    process.exitCode = 1;
     return;
   }
 
@@ -186,6 +188,7 @@ async function uploadToNotion(filePath) {
     );
   } catch (e) {
     console.error(`❌ 노션 API 오류 발생:`, e.message);
+    process.exitCode = 1;
   }
 }
 

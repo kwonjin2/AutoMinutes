@@ -13,6 +13,7 @@ const TEST_MODE = process.env.TEST_MODE !== "false";
 async function testSendFile(filePath) {
   if (!fs.existsSync(filePath)) {
     console.log(`❌ 파일을 찾을 수 없습니다: ${filePath}`);
+    process.exitCode = 1;
     return;
   }
 
@@ -45,9 +46,11 @@ async function testSendFile(filePath) {
       console.log("✅ 디스코드 파일 전송 성공!");
     } else {
       console.log(`⚠️ 전송 실패 (상태 코드): ${res.status}`);
+      process.exitCode = 1;
     }
   } catch (error) {
     console.log(`❌ 테스트 중 오류 발생:`, error.message);
+    process.exitCode = 1;
   }
 }
 
