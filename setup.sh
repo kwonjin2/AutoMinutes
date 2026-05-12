@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# meeting-ai setup — 플랫폼 자동 감지 + whisper.cpp 빌드 + 모델 선택 + 의존성 설치
+# meeting-ai setup — 플랫폼 자동 감지 + 의존성 자동 설치 + whisper.cpp 빌드 + 모델 선택
 #
 # 사용법:
-#   ./setup.sh                # 인터랙티브 모델 선택
-#   WHISPER_MODEL=tiny ./setup.sh   # 비대화형, 환경변수로 모델 지정
+#   ./setup.sh                       # 인터랙티브 모델 선택 + 누락 의존성 자동 설치
+#   WHISPER_MODEL=tiny ./setup.sh    # 비대화형, 환경변수로 모델 지정
+#   SKIP_AUTO_INSTALL=1 ./setup.sh   # 의존성 자동 설치 비활성화 (수동 설치 시)
 #
-# 지원: macOS (Apple Silicon · Intel), Linux (x86_64 · arm64, CUDA 자동 감지)
-# 비지원: Windows (WSL 사용 권장)
+# 지원: macOS (Apple Silicon · Intel, Homebrew), Linux (Debian/Ubuntu, apt-get)
+# 비지원: Windows (WSL 사용 권장), Linux 비-apt 배포판 (수동 설치 가이드 제공)
 
 set -euo pipefail
 
@@ -59,24 +60,190 @@ case "${OS}" in
     ;;
 esac
 
-# --- 2. 사전 의존성 확인 ---
+# --- 2. 사전 의존성 확인 + 자동 설치 ---
 hdr "2/6 사전 의존성 확인"
+
+# 명령어 → 패키지 이름 매핑.
+# Mac(brew) 와 Linux(apt) 의 패키지명이 다르므로 분리 관리.
+mac_pkg_for() {
+  case "$1" in
+    git)         echo "git" ;;
+    ffmpeg)      echo "ffmpeg" ;;
+    node|npm)    echo "node" ;;        # brew node 는 npm 동봉
+    cmake)       echo "cmake" ;;
+    make)        echo "" ;;            # Xcode CLT (별도 처리)
+    *)           echo "" ;;
+  esac
+}
+
+apt_pkg_for() {
+  case "$1" in
+    git)         echo "git" ;;
+    ffmpeg)      echo "ffmpeg" ;;
+    node)        echo "nodejs" ;;
+    npm)         echo "npm" ;;
+    cmake)       echo "cmake" ;;
+    make)        echo "build-essential" ;;
+    *)           echo "" ;;
+  esac
+}
+
+# 중복 제거하면서 패키지 목록 출력 (한 줄당 한 패키지).
+unique_pkgs() {
+  local -a out=()
+  local pkg existing seen
+  for pkg in "$@"; do
+    [[ -z "${pkg}" ]] && continue
+    seen=0
+    for existing in "${out[@]:-}"; do
+      if [[ "${existing}" == "${pkg}" ]]; then seen=1; break; fi
+    done
+    [[ "${seen}" == "0" ]] && out+=("${pkg}")
+  done
+  if [[ ${#out[@]} -gt 0 ]]; then
+    printf "%s\n" "${out[@]}"
+  fi
+}
+
+REQUIRED_CMDS=(git ffmpeg node npm cmake make)
 MISSING=()
-for cmd in git ffmpeg node npm cmake make; do
+for cmd in "${REQUIRED_CMDS[@]}"; do
   if command -v "${cmd}" >/dev/null 2>&1; then
     ok "${cmd} 발견: $(command -v "${cmd}")"
   else
     MISSING+=("${cmd}")
   fi
 done
+
 if [[ ${#MISSING[@]} -gt 0 ]]; then
   warn "누락된 도구: ${MISSING[*]}"
-  if [[ "${PLATFORM}" == "mac" ]]; then
-    warn "macOS 설치 예: brew install ${MISSING[*]}"
-  else
-    warn "Debian/Ubuntu 설치 예: sudo apt install -y ${MISSING[*]}"
+
+  if [[ "${SKIP_AUTO_INSTALL:-0}" == "1" ]]; then
+    if [[ "${PLATFORM}" == "mac" ]]; then
+      warn "수동 설치 예: brew install ffmpeg cmake node"
+      [[ " ${MISSING[*]} " == *" make "* ]] && warn "  + Xcode CLT: xcode-select --install"
+    else
+      warn "수동 설치 예: sudo apt install -y ffmpeg cmake build-essential nodejs npm"
+    fi
+    fail "SKIP_AUTO_INSTALL=1 지정됨 — 자동 설치 건너뜀. 위 명령으로 설치 후 재실행하세요."
   fi
-  fail "필요한 CLI 도구를 먼저 설치한 뒤 다시 실행하세요."
+
+  # --- 자동 설치 시도 ---
+  hdr "2.1 누락 의존성 자동 설치"
+
+  if [[ "${PLATFORM}" == "mac" ]]; then
+    # Homebrew 필수.
+    if ! command -v brew >/dev/null 2>&1; then
+      warn "Homebrew(brew) 명령을 찾지 못했습니다."
+      warn "  설치: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+      warn "  또는 https://brew.sh 참조"
+      fail "Homebrew 설치 후 ./setup.sh 를 다시 실행하세요. (또는 SKIP_AUTO_INSTALL=1 로 수동 설치)"
+    fi
+
+    # Xcode CLT (make 가 누락된 경우 별도 안내 — brew 로 설치 불가).
+    if [[ " ${MISSING[*]} " == *" make "* ]]; then
+      warn "make 누락 → Xcode Command Line Tools 가 설치되어 있지 않습니다."
+      warn "  설치: xcode-select --install (GUI 설치창이 뜹니다)"
+      warn "  설치 완료 후 ./setup.sh 를 다시 실행하세요."
+      fail "Xcode CLT 는 brew 로 설치할 수 없습니다. 위 명령으로 먼저 설치하세요."
+    fi
+
+    # brew 패키지로 매핑 + 중복 제거.
+    BREW_PKGS_RAW=()
+    for cmd in "${MISSING[@]}"; do
+      pkg="$(mac_pkg_for "${cmd}")"
+      [[ -n "${pkg}" ]] && BREW_PKGS_RAW+=("${pkg}")
+    done
+    BREW_PKGS=()
+    if [[ ${#BREW_PKGS_RAW[@]} -gt 0 ]]; then
+      mapfile -t BREW_PKGS < <(unique_pkgs "${BREW_PKGS_RAW[@]}")
+    fi
+
+    if [[ ${#BREW_PKGS[@]} -gt 0 ]]; then
+      log "brew install ${BREW_PKGS[*]}"
+      if ! brew install "${BREW_PKGS[@]}"; then
+        warn "brew install 실패. 위 출력 로그를 확인하세요."
+        warn "수동 설치: brew install ${BREW_PKGS[*]}"
+        fail "Homebrew 패키지 설치 실패 — 네트워크/권한 문제일 수 있습니다."
+      fi
+      ok "brew 패키지 설치 완료."
+    fi
+
+  else
+    # Linux: apt 전용 (다른 배포판은 별도 가이드).
+    if ! command -v apt-get >/dev/null 2>&1; then
+      warn "apt-get 명령을 찾지 못했습니다 — Debian/Ubuntu 외 배포판으로 보입니다."
+      if command -v dnf  >/dev/null 2>&1; then
+        warn "  Fedora/RHEL 예: sudo dnf install -y ffmpeg cmake gcc-c++ make nodejs npm git"
+      elif command -v pacman >/dev/null 2>&1; then
+        warn "  Arch 예: sudo pacman -S --needed ffmpeg cmake base-devel nodejs npm git"
+      elif command -v zypper >/dev/null 2>&1; then
+        warn "  openSUSE 예: sudo zypper install ffmpeg cmake gcc-c++ make nodejs npm git"
+      else
+        warn "  배포판 패키지 매니저로 다음을 설치: ffmpeg cmake build-essential(혹은 동급) nodejs npm git"
+      fi
+      fail "apt-get 미감지 — 자동 설치 불가. 위 가이드대로 수동 설치 후 재실행하세요."
+    fi
+
+    # apt 패키지로 매핑 + 중복 제거.
+    APT_PKGS_RAW=()
+    for cmd in "${MISSING[@]}"; do
+      pkg="$(apt_pkg_for "${cmd}")"
+      [[ -n "${pkg}" ]] && APT_PKGS_RAW+=("${pkg}")
+    done
+    APT_PKGS=()
+    if [[ ${#APT_PKGS_RAW[@]} -gt 0 ]]; then
+      mapfile -t APT_PKGS < <(unique_pkgs "${APT_PKGS_RAW[@]}")
+    fi
+
+    # sudo 필요 여부 결정 (root 면 생략).
+    SUDO=""
+    if [[ "${EUID}" -ne 0 ]]; then
+      if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo 가 없으며 root 가 아닙니다."
+        warn "  root 로 다시 실행하거나, 다음을 root 권한으로 설치하세요:"
+        warn "    apt-get update && apt-get install -y ${APT_PKGS[*]:-}"
+        fail "sudo 미설치 + 비-root — 자동 설치 불가."
+      fi
+      SUDO="sudo"
+    fi
+
+    if [[ ${#APT_PKGS[@]} -gt 0 ]]; then
+      log "${SUDO:+${SUDO} }apt-get update"
+      if ! ${SUDO} apt-get update; then
+        warn "apt-get update 실패. 네트워크/권한 또는 sources.list 문제일 수 있습니다."
+        fail "apt 메타데이터 갱신 실패 — 위 로그를 확인하세요."
+      fi
+      log "${SUDO:+${SUDO} }apt-get install -y ${APT_PKGS[*]}"
+      if ! ${SUDO} apt-get install -y "${APT_PKGS[@]}"; then
+        warn "apt-get install 실패. 위 출력 로그를 확인하세요."
+        warn "수동 설치: ${SUDO:+${SUDO} }apt-get install -y ${APT_PKGS[*]}"
+        fail "apt 패키지 설치 실패 — 패키지명/네트워크/권한을 확인하세요."
+      fi
+      ok "apt 패키지 설치 완료."
+    fi
+  fi
+
+  # --- 재검증 ---
+  log "설치 후 재검증..."
+  hash -r 2>/dev/null || true
+  STILL_MISSING=()
+  for cmd in "${MISSING[@]}"; do
+    if command -v "${cmd}" >/dev/null 2>&1; then
+      ok "${cmd} 설치 확인: $(command -v "${cmd}")"
+    else
+      STILL_MISSING+=("${cmd}")
+    fi
+  done
+  if [[ ${#STILL_MISSING[@]} -gt 0 ]]; then
+    warn "자동 설치 후에도 여전히 누락: ${STILL_MISSING[*]}"
+    warn "PATH 갱신이 필요할 수 있습니다 (새 셸을 열거나 'hash -r' 후 재시도)."
+    if [[ "${PLATFORM}" == "mac" ]]; then
+      warn "Apple Silicon brew 경로 누락 시: eval \"\$(/opt/homebrew/bin/brew shellenv)\""
+    fi
+    fail "필수 도구 설치를 완료하지 못했습니다. 위 안내를 확인하세요."
+  fi
+  ok "모든 필수 도구 설치 확인."
 fi
 
 # --- 3. whisper.cpp 준비 (벤더링 또는 클론) ---
