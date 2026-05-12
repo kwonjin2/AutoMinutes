@@ -27,6 +27,12 @@ archived/
 team_wiki_tmp/
 temp_chunks/
 
+# Private prompts: root-level prompt.md is the legacy team-ID file. Customized prompts
+# should live as prompts/<name>.local.md (or prompts/local.md) and stay out of the public repo.
+/prompt.md
+/prompts/local.md
+/prompts/*.local.md
+
 # Media
 *.wav
 *.flac

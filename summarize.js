@@ -9,7 +9,10 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 async function runSummarization() {
   try {
-    const promptPath = path.join(__dirname, "prompt.md");
+    const promptPath = path.resolve(
+      __dirname,
+      process.env.PROMPT_PATH || "prompts/default.md",
+    );
     const transcriptPath = path.join(
       __dirname,
       "transcripts",
@@ -20,8 +23,11 @@ async function runSummarization() {
     let systemInstruction = "";
     if (fs.existsSync(promptPath)) {
       systemInstruction = fs.readFileSync(promptPath, "utf-8");
+      console.log(`📝 프롬프트 로드: ${promptPath}`);
     } else {
-      console.log("⚠️ prompt.md 파일을 찾을 수 없습니다. (비어서 진행)");
+      console.log(
+        `⚠️ 프롬프트 파일을 찾을 수 없습니다: ${promptPath} (비어서 진행)`,
+      );
     }
 
     if (!fs.existsSync(transcriptPath)) {

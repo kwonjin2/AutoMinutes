@@ -10,6 +10,7 @@
    - C++ 코어 엔진인 `whisper.cpp` 모델을 사용하여 GPU 기반의 압도적인 속도로 한국어 음성 화자분리 텍스트를 생성합니다.
 2. **AI 요약 생성 (`summarize.js`)**:
    - 전사된 텍스트(`meeting_with_speakers.txt`)를 Google Gemini API (Gemini 3 Flash)를 이용해 요약본 마크다운(`meeting_summary.md`)으로 생성합니다.
+   - 요약 프롬프트는 `prompts/` 폴더에서 관리하며 `PROMPT_PATH` 환경변수로 교체할 수 있습니다 (아래 "프롬프트 커스터마이징" 참고).
 3. **업로드 자동화 (`discord.js`, `notion.js`, `github_wiki.js`)**:
    - 요약본을 서버로 발송합니다.
    - 🚨 `TEST_MODE` 활성화를 통해 서비스 운영망에 모의 데이터가 전송되는 것을 방어할 수 있습니다.
@@ -75,3 +76,23 @@ npm run start
 - `npm run discord` : 디스코드로 결과 폼 데이터 등 발송
 - `npm run notion` : 노션 타임테이블 마크다운 파싱 및 블록 업로드
 - `npm run wiki` : Github Wiki `.Sidebar.md` 동적 갱신 및 MD 푸시
+
+---
+
+## 🧩 프롬프트 커스터마이징 (Prompt Customization)
+
+요약 프롬프트는 `prompts/` 디렉토리에서 마크다운 파일로 관리합니다.
+
+- `prompts/default.md` — 팀 ID/이름이 비어 있는 OSS 기본 템플릿. 그대로 써도 동작하며,
+  팀 명단/멘토 ID 자리(`<id1>` 등)를 본인 팀 정보로 교체하면 됩니다.
+- `prompts/example.md` — 본인 팀에 맞게 커스터마이징한 한국어 예시. 복사한 뒤 ID/이름만
+  바꿔서 사용하는 출발점으로 권장.
+
+다른 파일을 쓰고 싶다면 `.env`에 `PROMPT_PATH`를 지정하세요 (저장소 루트 기준 상대 경로):
+
+```env
+# .env
+PROMPT_PATH=prompts/example.md
+```
+
+설정이 없으면 `prompts/default.md`가 사용됩니다.
