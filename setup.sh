@@ -140,11 +140,63 @@ fi
 log "선택된 모델: ${MODEL}"
 
 MODEL_FILE="${MODELS_DIR}/ggml-${MODEL}.bin"
-if [[ -f "${MODEL_FILE}" ]]; then
-  ok "모델 파일 이미 존재: ${MODEL_FILE}"
+# 모델 파일이 이미 존재하면서 비어있지 않으면 스킵.
+# (이전 실행이 다운로드 중간에 끊겼을 경우 0~수 바이트짜리 파일이 남아있을 수 있어 사이즈도 확인.)
+if [[ -f "${MODEL_FILE}" && "$(wc -c < "${MODEL_FILE}" 2>/dev/null || echo 0)" -gt 1048576 ]]; then
+  MODEL_SIZE_HR="$(du -h "${MODEL_FILE}" 2>/dev/null | cut -f1 || echo unknown)"
+  ok "모델 파일 이미 존재 (${MODEL_SIZE_HR}): ${MODEL_FILE}"
 else
-  log "모델 다운로드 중 (${MODEL})..."
-  (cd "${WHISPER_DIR}" && bash models/download-ggml-model.sh "${MODEL}")
+  if [[ -f "${MODEL_FILE}" ]]; then
+    warn "기존 모델 파일이 1MB 미만 — 부분 다운로드로 판단하여 제거 후 재다운로드."
+    rm -f "${MODEL_FILE}"
+  fi
+
+  # --- 다운로드 + 재시도 ---
+  # 네트워크 일시 장애에 대비해 최대 3회 시도.
+  # 매 실패마다 부분 다운로드 파일을 제거하여 download-ggml-model.sh 의
+  # "이미 존재하므로 스킵" 로직이 손상된 파일을 유지하지 않도록 함.
+  MAX_DL_ATTEMPTS=3
+  dl_attempt=1
+  DL_OK=0
+  while (( dl_attempt <= MAX_DL_ATTEMPTS )); do
+    log "모델 다운로드 시도 ${dl_attempt}/${MAX_DL_ATTEMPTS} (${MODEL})..."
+    if (cd "${WHISPER_DIR}" && bash models/download-ggml-model.sh "${MODEL}"); then
+      # 사이즈 sanity check: 가장 작은 tiny 모델도 39MB 라 1MB 미만이면 분명히 부분/오류 응답.
+      if [[ -f "${MODEL_FILE}" && "$(wc -c < "${MODEL_FILE}" 2>/dev/null || echo 0)" -gt 1048576 ]]; then
+        DL_OK=1
+        break
+      fi
+      warn "다운로드 스크립트는 성공했지만 결과 파일이 비어있거나 1MB 미만입니다."
+    else
+      warn "다운로드 실패 (시도 ${dl_attempt}/${MAX_DL_ATTEMPTS})."
+    fi
+
+    # 다음 시도 전에 부분 다운로드 정리.
+    if [[ -f "${MODEL_FILE}" ]]; then
+      log "부분 다운로드 파일 제거: ${MODEL_FILE}"
+      rm -f "${MODEL_FILE}"
+    fi
+
+    if (( dl_attempt < MAX_DL_ATTEMPTS )); then
+      # 지수 백오프 (2s → 4s).
+      backoff=$(( 2 * dl_attempt ))
+      log "${backoff}초 대기 후 재시도..."
+      sleep "${backoff}"
+    fi
+    dl_attempt=$(( dl_attempt + 1 ))
+  done
+
+  if (( DL_OK != 1 )); then
+    fail "모델 다운로드 최종 실패 (${MAX_DL_ATTEMPTS}회 시도).
+  - 네트워크/방화벽/Hugging Face 접근을 확인하세요.
+  - 또는 수동으로 다운로드해서 ${MODELS_DIR}/ 에 두고 setup.sh 를 다시 실행하세요:
+      cd ${WHISPER_DIR} && bash models/download-ggml-model.sh ${MODEL}
+    또는 https://huggingface.co/ggerganov/whisper.cpp/tree/main 에서
+    ggml-${MODEL}.bin 를 직접 받아 ${MODELS_DIR}/ggml-${MODEL}.bin 으로 저장."
+  fi
+
+  MODEL_SIZE_HR="$(du -h "${MODEL_FILE}" 2>/dev/null | cut -f1 || echo unknown)"
+  ok "모델 다운로드 완료 (${MODEL_SIZE_HR}): ${MODEL_FILE}"
 fi
 
 # --- 6. npm install + .env ---
