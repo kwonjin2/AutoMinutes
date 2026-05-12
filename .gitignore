@@ -21,7 +21,8 @@ __pycache__/
 
 # Project specific
 whisper.cpp/
-recordings/
+recordings/*
+!recordings/README.md
 transcripts/
 archived/
 team_wiki_tmp/
