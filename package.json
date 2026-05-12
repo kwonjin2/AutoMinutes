@@ -11,7 +11,9 @@
     "notion": "node notion.js",
     "wiki": "node github_wiki.js",
     "upload": "node discord.js && node notion.js && node github_wiki.js",
-    "doctor": "node doctor.js"
+    "doctor": "node doctor.js",
+    "bench": "node bench/mode_a_regression.js",
+    "bench:static": "node bench/mode_a_regression.js --static-only"
   },
   "repository": {
     "type": "git",
