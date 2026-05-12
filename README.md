@@ -2,6 +2,8 @@
 
 > 온라인 회의 녹음본을 전사(STT), 자동 요약(Summary), 그리고 팀 채널(디스코드, 노션, 깃허브 위키)에 배포하는 올인원(All-in-One) 자동화 파이프라인 레포지토리입니다. (Python에서 Node.js 환경으로 새롭게 마이그레이션 되었습니다!)
 
+🇬🇧 English README: [README.en.md](README.en.md)
+
 ---
 
 ## ✨ Features (주요 기능)
@@ -121,3 +123,9 @@ PROMPT_PATH=prompts/mentoring.md
 ```
 
 설정이 없으면 `prompts/default.md`가 사용됩니다.
+
+---
+
+## 📜 라이선스 (License)
+
+MIT 라이선스 — 자세한 내용은 [LICENSE](LICENSE) 파일 참고.
