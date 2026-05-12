@@ -10,7 +10,8 @@
     "discord": "node discord.js",
     "notion": "node notion.js",
     "wiki": "node github_wiki.js",
-    "upload": "node discord.js && node notion.js && node github_wiki.js"
+    "upload": "node discord.js && node notion.js && node github_wiki.js",
+    "doctor": "node doctor.js"
   },
   "repository": {
     "type": "git",

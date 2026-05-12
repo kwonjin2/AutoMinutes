@@ -89,6 +89,7 @@ npm run start
 위 명령어를 치면 "전사 -> 요약 -> 디스코드 배포 -> 노션 배포 -> 깃허브 위키 배포 -> 환경 정리" 가 순차적으로 진행됩니다.
 
 **단계별 개별 실행**:
+- `npm run doctor` : 의존성/설정 헬스 체크 (Node·FFmpeg·whisper-cli·모델·.env). 필수 누락 시 exit 1.
 - `npm run transcribe` : 음성 전사 분리 및 텍스트 취합
 - `npm run summarize` : Gemini 요약 로직 및 아카이빙 로직 실행
 - `npm run discord` : 디스코드로 결과 폼 데이터 등 발송
