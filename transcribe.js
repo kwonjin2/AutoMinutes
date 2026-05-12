@@ -21,6 +21,10 @@ const MODEL_PATH = path.join(
 const INPUT_DIR = "recordings";
 const OUTPUT_DIR = "transcripts";
 
+// ffmpeg가 16kHz mono WAV 로 정규화한 뒤 whisper-cli 에 넘기므로 ffmpeg가
+// 디코드 가능한 포맷이면 동작하지만, 실제로 검증한 화이트리스트만 받는다.
+const AUDIO_EXTENSIONS = new Set([".flac", ".wav", ".mp3"]);
+
 // Apple Silicon은 P-core 수를 우선 사용, 그 외 플랫폼은 논리 코어 - 2.
 // OS 및 다른 프로세스 여유로 코어 1~2개는 비워둠.
 function detectThreads() {
@@ -110,14 +114,19 @@ function runWhisperCli(wavPath, outputBase, prefix) {
 async function transcribeFile(file) {
   const prefix = `[${file}]`;
   const inputPath = path.join(INPUT_DIR, file);
+  const baseName = path.parse(file).name;
 
-  let speaker = file.replace(".flac", "");
+  let speaker = baseName;
   if (speaker.includes("-")) {
     speaker = speaker.split("-").slice(1).join("-");
   }
 
-  const wavPath = inputPath.replace(".flac", ".wav");
-  console.log(`${prefix} 🎵 변환 중 (FLAC -> 16kHz WAV)...`);
+  // 임시 WAV 는 tmpdir 에 두어 입력이 .wav 일 때 원본과 충돌하지 않게 한다.
+  const wavPath = path.join(
+    os.tmpdir(),
+    `meeting-ai-${process.pid}-${baseName}.wav`,
+  );
+  console.log(`${prefix} 🎵 변환 중 (16kHz mono WAV)...`);
 
   try {
     execSync(
@@ -130,7 +139,7 @@ async function transcribeFile(file) {
     return [];
   }
 
-  const outputBase = path.join(OUTPUT_DIR, file.replace(".flac", ""));
+  const outputBase = path.join(OUTPUT_DIR, baseName);
   const jsonFile = outputBase + ".json";
 
   if (fs.existsSync(jsonFile)) {
@@ -210,12 +219,18 @@ async function runTranscription() {
   }
 
   const files = fs.readdirSync(INPUT_DIR);
-  const flacFiles = files.filter(
-    (f) => f.endsWith(".flac") && f !== "meeting.flac",
-  );
+  const audioFiles = files.filter((f) => {
+    const ext = path.extname(f).toLowerCase();
+    if (!AUDIO_EXTENSIONS.has(ext)) return false;
+    // 화자별 트랙 옆에 놓인 합본(mixdown) meeting.* 은 단일 화자로 재전사되지
+    // 않도록 스킵한다. 확장자만 다를 뿐 의미는 동일.
+    return path.parse(f).name.toLowerCase() !== "meeting";
+  });
 
-  if (flacFiles.length === 0) {
-    console.log("❌ recordings 폴더에 분석할 .flac 파일이 없습니다.");
+  if (audioFiles.length === 0) {
+    console.log(
+      "❌ recordings 폴더에 분석할 오디오 파일이 없습니다 (.flac/.wav/.mp3).",
+    );
     process.exitCode = 1;
     return;
   }
@@ -231,10 +246,10 @@ async function runTranscription() {
     `🖥️  환경 감지: ${process.platform}/${process.arch}, 논리코어 ${os.cpus().length}개, RAM ${totalGB}GB`,
   );
   console.log(
-    `🚀 동시 ${CONCURRENCY}개 워커 × whisper 스레드 ${THREADS}개로 전사 시작 (총 ${flacFiles.length}개 파일)`,
+    `🚀 동시 ${CONCURRENCY}개 워커 × whisper 스레드 ${THREADS}개로 전사 시작 (총 ${audioFiles.length}개 파일)`,
   );
   const perFileSegments = await runWithConcurrency(
-    flacFiles,
+    audioFiles,
     CONCURRENCY,
     transcribeFile,
   );

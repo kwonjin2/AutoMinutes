@@ -6,7 +6,7 @@
 
 ## ✨ Features (주요 기능)
 1. **오디오 변환 및 전사 (`transcribe.js`)**:
-   - 디스코드로 녹음된 다중 트랙 음성(FLAC)을 16kHz WAV 로 자동 변환합니다. (FFmpeg 사용)
+   - 디스코드 등에서 녹음된 다중 트랙 음성(`.flac`, `.wav`, `.mp3`)을 16kHz mono WAV 로 자동 변환합니다. (FFmpeg 사용)
    - C++ 코어 엔진인 `whisper.cpp` 모델을 사용하여 GPU 기반의 압도적인 속도로 한국어 음성 화자분리 텍스트를 생성합니다.
 2. **AI 요약 생성 (`summarize.js`)**:
    - 전사된 텍스트(`meeting_with_speakers.txt`)를 Google Gemini API (Gemini 3 Flash)를 이용해 요약본 마크다운(`meeting_summary.md`)으로 생성합니다.
@@ -22,7 +22,7 @@
 본 프로젝트를 로컬에서 구동하기 위해 아래 프로그램과 모델이 시스템에 설치되어 있어야 합니다.
 
 1. **Node.js** (v18 이상 권장)
-2. **FFmpeg** (CLI 설치 필수, FLAC -> WAV 변환용)
+2. **FFmpeg** (CLI 설치 필수, 입력 오디오를 16kHz mono WAV 로 정규화)
    - macOS: `brew install ffmpeg`
 3. **Whisper.cpp (내부 빌드)**
    - 프로젝트 내부 `whisper.cpp/` 폴더 안의 `build/bin/whisper-cli` 코어 실행 파일이 빌드되어 있어야 합니다.
@@ -63,6 +63,10 @@ TEST_MODE=true
 ## 🚀 Usage (사용 가이드)
 
 프로젝트 폴더 안에 `recordings/` 폴더를 만들고, 화자별 분류가 끝난 `1234-UserName.flac` 형식의 파일들을 넣은 뒤 스크립트를 실행합니다.
+
+지원하는 입력 확장자는 `.flac` / `.wav` / `.mp3` 세 가지입니다 (대소문자 무관). 파이프라인 내부에서 FFmpeg 가 16kHz mono WAV 로 자동 정규화한 뒤 whisper-cli 에 넘기므로 원본 파일은 그대로 유지됩니다.
+
+> ℹ️ 같은 폴더에 `meeting.flac` / `meeting.wav` / `meeting.mp3` 같은 **합본(mixdown)** 파일이 있으면 자동으로 스킵됩니다 — 단일 화자로 재전사되는 것을 막기 위함입니다. 화자별 트랙만 두고 싶다면 합본 파일은 다른 폴더로 옮겨주세요.
 
 **전체 파이프라인 일괄 실행 (가장 추천)**:
 ```bash
