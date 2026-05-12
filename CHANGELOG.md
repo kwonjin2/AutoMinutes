@@ -4,6 +4,25 @@
 
 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 를 따르며, 본 프로젝트는 [Semantic Versioning](https://semver.org/lang/ko/) 을 준수합니다.
 
+## [1.0.1] — 2026-05-12
+
+v1.0.0 의 신규 사용자 onboarding 경험(S4) 강화 + 문서 보강 패치 릴리스.
+backward compatible — 기존 사용자는 별도 액션 불필요.
+
+### Added (신규)
+- **setup.sh 의존성 자동 설치** — Mac(Homebrew)/Linux(apt-get) 누락 의존성 자동 설치. Xcode CLT/sudo 미설치 시 명확한 가이드. `SKIP_AUTO_INSTALL=1` 환경변수로 옵트아웃 가능 (#10)
+- **setup.sh 모델 다운로드 재시도** — 최대 3회 자동 재시도 (지수 백오프 2s/4s), 1MB 미만 부분 파일 자동 제거 후 재다운로드, 최종 실패 시 수동 다운로드 가이드 (#12)
+- **setup.sh 마지막에 doctor 안내** — Setup 완료 후 `npm run doctor` 실행을 다음 단계로 명시 (#14)
+- **recordings/README.md** — 입력 폴더 사용 가이드. 멀티트랙 vs 단일트랙 모드 표, 합본 mixdown 가드 경고, ~1분 빠른 검증 가이드, 다른 포맷 변환 예제 (#16)
+- **README 강화: Performance / Troubleshooting / 출력 샘플** — 한/영 동시 보강. 환경별 처리 시간 표 (M3 Pro/CUDA/CPU), 자동 튜닝 공식, 8개 FAQ, prompts/default.md 양식 기반 익명화 출력 샘플 (#17)
+
+### Changed (변경)
+- **`.env.example` 구조 재정리** — 섹션 분류 (REQUIRED/RECOMMENDED runtime/OPTIONAL prompt/OPTIONAL upload/OPTIONAL safety), Gemini API 발급 링크, WHISPER_MODEL 빠른 검증 팁, 업로드 그룹 vars 묶음 명시 (#16)
+- **`.gitignore`** — `recordings/` → `recordings/*` + `!recordings/README.md` (README 만 추적) (#16)
+
+### Documentation Accuracy (문서 정확성)
+- README 의 자동 튜닝 공식, 모델 크기, 출력 양식이 실제 `transcribe.js` / `setup.sh` / `prompts/default.md` 와 정합되도록 검증 + 정정 (PR #17 iter 2)
+
 ## [1.0.0] — 2026-05-12
 
 **meeting-ai v1.0** — OSS(MIT) 초기 공개 릴리스. 시드 `seed_v1_oss.yaml` 의 v1.0 acceptance criteria 충족.
@@ -48,4 +67,5 @@
 | S9 | WHISPER_LANG env | #9 |
 | S10 | MIT + 영어 README | #11, #13 |
 
+[1.0.1]: https://github.com/kwonjin2/whisper/releases/tag/v1.0.1
 [1.0.0]: https://github.com/kwonjin2/whisper/releases/tag/v1.0.0
