@@ -126,6 +126,99 @@ PROMPT_PATH=prompts/mentoring.md
 
 ---
 
+## ⚡ 성능 (Performance)
+
+5시간 분량 4-화자 멀티트랙 회의 (FLAC 입력) 기준 처리 시간:
+
+| 환경 | 모델 | 처리 시간 | RAM 사용 |
+|---|---|---|---|
+| Apple Silicon (M3 Pro, Metal) | `large-v3-turbo` | **~10분** | 8GB peak |
+| Apple Silicon (M3 Pro, Metal) | `medium` | ~6분 | 5GB peak |
+| Linux + NVIDIA CUDA (RTX 4070) | `large-v3-turbo` | ~7분 | 6GB peak |
+| Linux CPU (8-core) | `large-v3-turbo` | ~45분 | 6GB peak |
+
+자동 튜닝 (수동 override 가능):
+
+- **동시 워커 수** = `Math.floor((RAM_GB - 4) / 3)` — 인스턴스당 ~2.5GB 가정 + OS 여유 4GB. `WHISPER_CONCURRENCY` 로 override.
+- **whisper 스레드 수** = Apple Silicon 은 P-core 수 (sysctl 자동 감지), 그 외는 `min(논리코어 - 2, 12)`. `WHISPER_THREADS` 로 override.
+
+> ℹ️ Apple Silicon 의 Metal GPU 는 직렬화되므로 동시 워커를 2 이상으로 늘려도 큰 이득은 없습니다. CUDA / CPU 환경에서는 RAM 만 받쳐주면 4~6 워커까지 효과 있습니다.
+
+모델 크기별 트레이드오프:
+
+| 모델 | 파일 크기 | 한국어 품질 | 권장 용도 |
+|---|---|---|---|
+| `tiny` | 39MB | 낮음 (할루시네이션 많음) | 빠른 검증 (`recordings/README.md` 의 1분 테스트) |
+| `small` | 466MB | 중간 | 영어 위주 회의, 빠른 처리 |
+| `medium` | 1.5GB | 높음 | 모바일/저사양 |
+| `large-v3-turbo` (기본) | 1.6GB | 매우 높음, 빠름 | **권장** — 한국어 회의 1차 |
+| `large-v3` | 3.1GB | 가장 높음, 느림 | 최대 품질 필요 시 |
+
+---
+
+## 🛠️ 트러블슈팅 (Troubleshooting / FAQ)
+
+### Q. `setup.sh` 가 `cmake` 또는 `make` 못 찾는다고 멈춰요
+**A.** macOS 는 Xcode Command Line Tools 가 필요합니다 — `xcode-select --install` 로 GUI 설치창 띄우고 완료 후 `./setup.sh` 재실행. Linux 는 `setup.sh` 가 `apt-get install build-essential` 을 자동 시도합니다 (sudo 필요). `SKIP_AUTO_INSTALL=1 ./setup.sh` 로 자동 설치 끄고 수동 가능.
+
+### Q. 모델 다운로드가 중간에 끊겼어요
+**A.** `setup.sh` 가 최대 3회 자동 재시도합니다 (지수 백오프 2s/4s). 1MB 미만 부분 파일은 자동 제거 후 재다운로드. 3회 모두 실패하면 수동 다운로드 가이드가 출력됩니다 (huggingface 직접 받아서 `whisper.cpp/models/ggml-<MODEL>.bin` 으로 저장).
+
+### Q. `npm run start` 실행 시 `❌ recordings 폴더에 분석할 오디오 파일이 없습니다` 나와요
+**A.** `recordings/` 에 `.flac` / `.wav` / `.mp3` 파일이 있는지 확인. `meeting.flac` / `meeting.wav` / `meeting.mp3` 는 **의도적으로 스킵**됩니다 (멀티트랙 합본 가드). 파일명을 `single.wav` 등으로 변경하세요 — 자세한 사항은 `recordings/README.md`.
+
+### Q. Apple Silicon 인데 Metal 가속이 안 되는 것 같아요
+**A.** `whisper.cpp/build/` 폴더 삭제 후 `./setup.sh` 재실행. cmake 가 `-DGGML_METAL=ON` 플래그로 다시 빌드합니다. 빌드 로그에서 `BLAS = 1 | METAL = 1` 출력이 보이면 정상.
+
+### Q. `GEMINI_API_KEY 환경변수가 설정되지 않았습니다` 에러
+**A.** `npm run doctor` 가 어떤 환경변수가 누락됐는지 알려줍니다. [Google AI Studio](https://ai.google.dev) 에서 무료 API 키 발급 → `.env` 에 `GEMINI_API_KEY=AIzaSy...` 추가.
+
+### Q. 한국어가 아닌 회의를 전사하고 싶어요
+**A.** `.env` 에 `WHISPER_LANG=auto` (자동 감지) 또는 `WHISPER_LANG=en` (영어 강제) 추가. ISO-639-1 코드면 모두 동작 (en/ja/zh/es 등).
+
+### Q. 디스코드/노션/위키 업로드 없이 요약만 쓰고 싶어요
+**A.** `.env` 의 `DISCORD_WEBHOOK_URL`, `NOTION_TOKEN`, `GITHUB_PAT` 그룹을 모두 비워두면 자동 스킵됩니다 (로그만 남음). Gemini 요약은 `archived/<timestamp>/meeting_summary.md` 에 저장됩니다.
+
+### Q. 전사 결과가 이상해요 (할루시네이션, 반복 텍스트)
+**A.** 입력 오디오의 무음 구간이 길거나 SNR 이 낮을 때 발생. FFmpeg 로 무음 구간 제거 후 재시도: `ffmpeg -i raw.wav -af "silenceremove=stop_periods=-1:stop_duration=1:stop_threshold=-30dB" recordings/single.wav`. 또는 더 큰 모델 (`large-v3`) 사용.
+
+---
+
+## 🎬 출력 샘플 (Example Output)
+
+`npm run start` 실행 후 `archived/<YYYY-MM-DD>/meeting_summary_<HHMMSS>.md` 형식으로 저장됩니다. 구조는 `prompts/default.md` 또는 본인이 지정한 프롬프트에 따라 결정됩니다.
+
+기본 템플릿 출력 예시 (익명화):
+
+```markdown
+# 📝 [회의 제목]
+
+**참여자:** Alice, Bob, Carol, Dave
+**회의 성격:** 기능 정책 조율 회의
+
+## ⏰ 타임 테이블
+- **[00:00 ~ 12:00]** 대시보드 UI 개선 논의 (랭킹/달성률 표시)
+- **[12:00 ~ 25:00]** 모바일 입력 UX 개선 (태그 입력 방식 변경)
+- **[25:00 ~ 종료]** 릴리즈 일정 확정 및 QA 계획
+
+## ✍🏻 회의 안건
+1. 대시보드 시각화 — 달성률 배경 이미지 + 멤버 랭킹 레이아웃
+2. 입력 UI — 엔터 방식 → 추가 버튼 + 모달
+3. 릴리즈 정책 — 5/18 출시, 사용성 테스트 일정 수립
+
+## 🎯 결정 사항
+- [Alice] 대시보드 v2 디자인 5/14 까지 확정
+- [Bob] 태그 입력 컴포넌트 PR 5/15 까지
+- [Carol] QA 시나리오 작성 5/16 까지
+
+## ⚠️ 미해결 이슈
+- 비디오 SDK 의 CSS 커스텀 한계 — 추가 조사 필요
+```
+
+화자 이름은 `recordings/<id>-<UserName>.flac` 의 `<UserName>` 부분에서 자동 추출됩니다. 단일 트랙 입력은 `mixed` 라는 단일 라벨로 처리됩니다.
+
+---
+
 ## 📜 라이선스 (License)
 
 MIT 라이선스 — 자세한 내용은 [LICENSE](LICENSE) 파일 참고.

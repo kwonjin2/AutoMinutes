@@ -122,6 +122,99 @@ If unset, `prompts/default.md` is used.
 
 ---
 
+## ⚡ Performance
+
+Processing time for a 5-hour, 4-speaker multi-track meeting (FLAC input):
+
+| Environment | Model | Time | Peak RAM |
+|---|---|---|---|
+| Apple Silicon (M3 Pro, Metal) | `large-v3-turbo` | **~10 min** | 8 GB |
+| Apple Silicon (M3 Pro, Metal) | `medium` | ~6 min | 5 GB |
+| Linux + NVIDIA CUDA (RTX 4070) | `large-v3-turbo` | ~7 min | 6 GB |
+| Linux CPU (8-core) | `large-v3-turbo` | ~45 min | 6 GB |
+
+Auto-tuning (manually overridable):
+
+- **Concurrent workers** = `Math.floor((RAM_GB - 4) / 3)` — ~2.5 GB per instance + 4 GB OS headroom. Override with `WHISPER_CONCURRENCY`.
+- **Whisper threads** = on Apple Silicon, the P-core count (sysctl auto-detect); elsewhere `min(logical_cores - 2, 12)`. Override with `WHISPER_THREADS`.
+
+> ℹ️ Apple Silicon's Metal GPU is serialized, so raising concurrency above 2 doesn't help much. On CUDA/CPU, 4–6 workers scale well as long as RAM allows.
+
+Model trade-offs:
+
+| Model | File size | Korean quality | Recommended use |
+|---|---|---|---|
+| `tiny` | 39 MB | Low (frequent hallucinations) | Quick validation (`recordings/README.md` 1-min test) |
+| `small` | 466 MB | Medium | English-heavy meetings, fast processing |
+| `medium` | 1.5 GB | High | Mobile / low-RAM |
+| `large-v3-turbo` (default) | 1.6 GB | Very high, fast | **Recommended** — primary for Korean meetings |
+| `large-v3` | 3.1 GB | Highest, slower | When peak quality matters |
+
+---
+
+## 🛠️ Troubleshooting / FAQ
+
+### Q. `setup.sh` fails saying it can't find `cmake` or `make`
+**A.** On macOS you need Xcode Command Line Tools — run `xcode-select --install` (a GUI installer pops up), then re-run `./setup.sh`. On Linux, `setup.sh` will try `apt-get install build-essential` automatically (requires sudo). Use `SKIP_AUTO_INSTALL=1 ./setup.sh` to disable auto-install and install manually.
+
+### Q. Model download was interrupted
+**A.** `setup.sh` retries up to 3 times (exponential backoff 2s/4s). Partial files under 1 MB are automatically deleted and re-downloaded. After 3 failures, manual download guidance is printed (download from huggingface directly and save as `whisper.cpp/models/ggml-<MODEL>.bin`).
+
+### Q. `npm run start` complains: `❌ recordings 폴더에 분석할 오디오 파일이 없습니다`
+**A.** Make sure `recordings/` has `.flac` / `.wav` / `.mp3` files. Files named `meeting.flac` / `meeting.wav` / `meeting.mp3` are **deliberately skipped** (multi-track mixdown guard). Rename to e.g. `single.wav` — see `recordings/README.md` for details.
+
+### Q. I'm on Apple Silicon but Metal acceleration doesn't seem to work
+**A.** Delete `whisper.cpp/build/` and re-run `./setup.sh`. cmake will rebuild with `-DGGML_METAL=ON`. Confirm by checking the build log for `BLAS = 1 | METAL = 1`.
+
+### Q. `GEMINI_API_KEY 환경변수가 설정되지 않았습니다` error
+**A.** Run `npm run doctor` — it tells you exactly which env vars are missing. Get a free API key at [Google AI Studio](https://ai.google.dev) and add `GEMINI_API_KEY=AIzaSy...` to `.env`.
+
+### Q. I want to transcribe non-Korean meetings
+**A.** Add `WHISPER_LANG=auto` (auto-detection) or `WHISPER_LANG=en` (force English) to `.env`. Any ISO-639-1 code works (en/ja/zh/es/etc).
+
+### Q. I want summaries only, without Discord/Notion/Wiki uploads
+**A.** Leave the `DISCORD_WEBHOOK_URL`, `NOTION_TOKEN`, and `GITHUB_PAT` groups blank in `.env` — those steps auto-skip with a log line. The Gemini summary is saved to `archived/<timestamp>/meeting_summary.md`.
+
+### Q. Transcripts look wrong (hallucinations, repeated text)
+**A.** This usually happens when input audio has long silent stretches or low SNR. Remove silence with FFmpeg and retry: `ffmpeg -i raw.wav -af "silenceremove=stop_periods=-1:stop_duration=1:stop_threshold=-30dB" recordings/single.wav`. Or use a larger model (`large-v3`).
+
+---
+
+## 🎬 Example Output
+
+After `npm run start`, a summary is saved to `archived/<YYYY-MM-DD>/meeting_summary_<HHMMSS>.md`. Structure depends on `prompts/default.md` or your custom prompt.
+
+Default-template example (anonymized):
+
+```markdown
+# 📝 [Meeting Title]
+
+**Participants:** Alice, Bob, Carol, Dave
+**Type:** Feature policy alignment meeting
+
+## ⏰ Timeline
+- **[00:00 ~ 12:00]** Dashboard UI improvements (ranking / progress display)
+- **[12:00 ~ 25:00]** Mobile input UX (tag-input pattern change)
+- **[25:00 ~ end]** Release schedule finalization + QA plan
+
+## ✍🏻 Agenda
+1. Dashboard visualization — progress-based backgrounds + member ranking layout
+2. Input UI — Enter-to-submit → "Add" button + modal
+3. Release policy — ship 5/18, usability-testing plan
+
+## 🎯 Decisions
+- [Alice] Dashboard v2 design finalized by 5/14
+- [Bob] Tag-input component PR by 5/15
+- [Carol] QA scenarios drafted by 5/16
+
+## ⚠️ Open Issues
+- Video SDK's CSS customization limits — needs investigation
+```
+
+Speaker names are auto-extracted from `recordings/<id>-<UserName>.flac` (the `<UserName>` part). Single-track inputs are labeled `mixed`.
+
+---
+
 ## 📜 License
 
 MIT — see [LICENSE](LICENSE).
