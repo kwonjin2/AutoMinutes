@@ -11,8 +11,6 @@ const REPO = process.env.GITHUB_REPO_NAME;
 // [보안] 테스트 환경 모드
 const TEST_MODE = process.env.TEST_MODE !== "false";
 
-// URL 조립
-const TEAM_WIKI_URL = `https://${TOKEN}@github.com/${USER}/${REPO}.wiki.git`;
 const WIKI_TEMP_DIR = "team_wiki_tmp";
 
 function updateSidebar(wikiDir, pageNameNoExt) {
@@ -76,6 +74,13 @@ function updateTeamWiki(summaryMdPath) {
     return;
   }
 
+  if (!TOKEN || !USER || !REPO) {
+    console.log(
+      "⏭️  GITHUB_PAT / GITHUB_USERNAME / GITHUB_REPO_NAME 중 하나 이상 미설정 → GitHub Wiki 업로드를 스킵합니다.",
+    );
+    return;
+  }
+
   if (TEST_MODE) {
     console.log(
       `🚨 [TEST_MODE] 테스트 모드가 활성화되어 있습니다. 실제 Github Wiki 저장소에서 clone / push하지 않습니다.`,
@@ -83,9 +88,11 @@ function updateTeamWiki(summaryMdPath) {
     return;
   }
 
+  const teamWikiUrl = `https://${TOKEN}@github.com/${USER}/${REPO}.wiki.git`;
+
   if (!fs.existsSync(WIKI_TEMP_DIR)) {
     console.log("📂 팀 위키 클론 중...");
-    execSync(`git clone ${TEAM_WIKI_URL} ${WIKI_TEMP_DIR}`, {
+    execSync(`git clone ${teamWikiUrl} ${WIKI_TEMP_DIR}`, {
       stdio: "inherit",
     });
   } else {

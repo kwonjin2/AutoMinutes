@@ -17,6 +17,13 @@ async function testSendFile(filePath) {
     return;
   }
 
+  if (!DISCORD_WEBHOOK_URL) {
+    console.log(
+      "⏭️  DISCORD_WEBHOOK_URL 미설정 → 디스코드 업로드를 스킵합니다.",
+    );
+    return;
+  }
+
   console.log(`📡 디스코드로 전송 시도 중: ${filePath}`);
   
   // 당일 날짜 기반 동적 제목 생성 (예: 2026-03-19 회의록)
