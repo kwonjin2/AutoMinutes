@@ -106,15 +106,16 @@ npm run start
 
 - `prompts/default.md` — 한국어 기본 템플릿 (도메인 중립). 팀 명단 placeholder
   (`<id1>` 등)만 본인 팀 정보로 교체하면 그대로 동작합니다.
-- `prompts/example.md` — 구체적인 STT 오류 사례·기술 용어 교정·성능 지표(TTFB/LCP)·
-  멘토링 패턴 등 디테일이 포함된 한국어 예시. 자기 팀/도메인 컨텍스트로 내용을 바꿔
-  쓰는 출발점으로 권장.
+- `prompts/mentoring.md` — 시니어/멘토가 참여하는 멘토링 회의용 예시 템플릿.
+  구체적인 STT 오류 사례·기술 용어 교정·성능 지표(TTFB/LCP)·멘토 코멘트 가이드가
+  포함된 한국어 예시이며, 자기 팀/도메인 컨텍스트로 내용을 바꿔 쓰는 출발점으로 권장.
 
-다른 파일을 쓰고 싶다면 `.env`에 `PROMPT_PATH`를 지정하세요 (저장소 루트 기준 상대 경로):
+본인 팀 전용 프롬프트를 쓰려면 `prompts/` 아래 새 `.md` 파일을 만들고 `.env`의
+`PROMPT_PATH`를 그 경로로 지정하세요 (저장소 루트 기준 상대 경로):
 
 ```env
 # .env
-PROMPT_PATH=prompts/example.md
+PROMPT_PATH=prompts/mentoring.md
 ```
 
 설정이 없으면 `prompts/default.md`가 사용됩니다.
