@@ -86,6 +86,13 @@ async function uploadToNotion(filePath) {
     return;
   }
 
+  if (!NOTION_TOKEN || !DATABASE_ID) {
+    console.log(
+      "⏭️  NOTION_TOKEN / NOTION_DATABASE_ID 미설정 → 노션 업로드를 스킵합니다.",
+    );
+    return;
+  }
+
   const content = fs.readFileSync(filePath, "utf-8");
   const lines = content.split("\n");
 
@@ -163,12 +170,6 @@ async function uploadToNotion(filePath) {
       `🚨 [TEST_MODE] 테스트 모드가 활성화되어 있습니다. 실제 Notion 데이터베이스에 접근하지 않습니다.`,
     );
     console.log(`  (생성 예정 블록 수: ${childrenBlocks.length}개)`);
-    return;
-  }
-
-  if (!notion) {
-    console.log("❌ NOTION_TOKEN 또는 DATABASE_ID가 .env에 존재하지 않습니다.");
-    process.exitCode = 1;
     return;
   }
 

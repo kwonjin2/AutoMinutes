@@ -81,6 +81,8 @@ npm run start
 - `npm run notion` : 노션 타임테이블 마크다운 파싱 및 블록 업로드
 - `npm run wiki` : Github Wiki `.Sidebar.md` 동적 갱신 및 MD 푸시
 
+> ℹ️ **선택적 업로드 채널**: `DISCORD_WEBHOOK_URL`, `NOTION_TOKEN`/`NOTION_DATABASE_ID`, `GITHUB_PAT`/`GITHUB_USERNAME`/`GITHUB_REPO_NAME` 중 비어 있는 그룹이 있으면 해당 업로드 단계는 자동으로 스킵됩니다 (에러 없이 로그만 남김). Gemini 요약까지만 쓰고 싶다면 업로드 토큰을 모두 비워두면 됩니다.
+
 ---
 
 ## 🧩 프롬프트 커스터마이징 (Prompt Customization)
