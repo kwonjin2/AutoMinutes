@@ -181,8 +181,10 @@ fi
 hdr "✅ Setup 완료"
 cat <<EOM
 다음 단계:
-  1) .env 의 GEMINI_API_KEY 와 필요한 업로드 토큰을 채워 넣으세요.
+  1) npm run doctor
+     ↳ 의존성 / 모델 / .env 상태를 점검합니다. 문제 없으면 ✅ 만 출력됩니다.
+  2) .env 의 GEMINI_API_KEY 와 필요한 업로드 토큰을 채워 넣으세요.
      (디스코드/노션/위키 토큰은 비워두면 자동 스킵됩니다.)
-  2) recordings/ 폴더에 화자별 .flac / .wav / .mp3 트랙을 넣으세요.
-  3) npm run start
+  3) recordings/ 폴더에 화자별 .flac / .wav / .mp3 트랙을 넣으세요.
+  4) npm run start
 EOM
