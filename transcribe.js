@@ -22,6 +22,9 @@ const MODEL_PATH = path.join(
   "models",
   `ggml-${MODEL_NAME}.bin`,
 );
+// 기본값 ko: 한국어 회의가 1차 시나리오. 다국어/영어 회의는 .env 에서 WHISPER_LANG 변경.
+// "auto" 는 whisper.cpp 의 자동 언어 감지.
+const WHISPER_LANG = process.env.WHISPER_LANG || "ko";
 const INPUT_DIR = "recordings";
 const OUTPUT_DIR = "transcripts";
 
@@ -76,7 +79,7 @@ function runWhisperCli(wavPath, outputBase, prefix) {
         "-f",
         wavPath,
         "-l",
-        "ko",
+        WHISPER_LANG,
         "-t",
         String(THREADS),
         "-bs",

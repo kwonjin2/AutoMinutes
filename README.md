@@ -98,6 +98,8 @@ npm run start
 
 > ℹ️ **선택적 업로드 채널**: `DISCORD_WEBHOOK_URL`, `NOTION_TOKEN`/`NOTION_DATABASE_ID`, `GITHUB_PAT`/`GITHUB_USERNAME`/`GITHUB_REPO_NAME` 중 비어 있는 그룹이 있으면 해당 업로드 단계는 자동으로 스킵됩니다 (에러 없이 로그만 남김). Gemini 요약까지만 쓰고 싶다면 업로드 토큰을 모두 비워두면 됩니다.
 
+> ℹ️ **전사 언어**: 기본값은 한국어 (`-l ko`). 영어/일본어/다국어 회의는 `.env` 에 `WHISPER_LANG=auto` (whisper.cpp 자동 감지) 또는 `WHISPER_LANG=en` 처럼 ISO-639-1 코드를 지정하세요.
+
 ---
 
 ## 🧩 프롬프트 커스터마이징 (Prompt Customization)
