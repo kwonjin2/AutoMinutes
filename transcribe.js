@@ -3,6 +3,9 @@ const os = require("os");
 const path = require("path");
 const { execSync, spawn } = require("child_process");
 
+// setup.sh 가 .env 에 기록한 WHISPER_MODEL 을 픽업하기 위해 dotenv 로딩.
+require("dotenv").config();
+
 // [설정] 경로를 본인의 환경에 맞게 확인하세요.
 const BASE_DIR = process.cwd();
 const WHISPER_CLI = path.join(
@@ -12,11 +15,12 @@ const WHISPER_CLI = path.join(
   "bin",
   "whisper-cli",
 );
+const MODEL_NAME = process.env.WHISPER_MODEL || "large-v3-turbo";
 const MODEL_PATH = path.join(
   BASE_DIR,
   "whisper.cpp",
   "models",
-  "ggml-large-v3-turbo.bin",
+  `ggml-${MODEL_NAME}.bin`,
 );
 const INPUT_DIR = "recordings";
 const OUTPUT_DIR = "transcripts";

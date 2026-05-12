@@ -26,36 +26,50 @@
    - macOS: `brew install ffmpeg`
 3. **Whisper.cpp (내부 빌드)**
    - 프로젝트 내부 `whisper.cpp/` 폴더 안의 `build/bin/whisper-cli` 코어 실행 파일이 빌드되어 있어야 합니다.
-   - `whisper.cpp/models/ggml-large-v3-turbo.bin` 양자기반 가중치 파일이 존재해야 합니다.
+   - `whisper.cpp/models/ggml-<MODEL>.bin` 가중치 파일이 존재해야 합니다. `<MODEL>` 은 `.env` 의 `WHISPER_MODEL` (기본 `large-v3-turbo`) 와 일치해야 합니다.
+   - `./setup.sh` 가 위 두 가지를 자동으로 처리합니다.
 
 ---
 
 ## 🛠️ Installation & Setup (설치 및 환경변수 셋업)
+
+### ⚡ Quick Start (권장)
+
+```bash
+./setup.sh
+```
+
+`setup.sh` 가 다음을 자동으로 처리합니다:
+
+- **플랫폼 자동 감지** — macOS (Apple Silicon Metal · Intel CPU), Linux (NVIDIA CUDA · CPU)
+- **사전 의존성 체크** — `git`/`ffmpeg`/`node`/`npm`/`cmake`/`make` 누락 시 안내
+- **whisper.cpp 빌드** — 플랫폼에 맞는 cmake 플래그로 release 빌드
+- **모델 인터랙티브 선택** — `tiny` / `base` / `small` / `medium` / `large-v3` / `large-v3-turbo` (기본)
+- **모델 다운로드** — `whisper.cpp/models/download-ggml-model.sh`
+- **npm install + .env 초기화** — `.env.example` → `.env` 복사, `WHISPER_MODEL` 자동 기록
+
+비대화형으로 모델을 지정하려면 `WHISPER_MODEL=tiny ./setup.sh` 처럼 환경변수로 넘기면 됩니다.
+
+이후 `.env` 의 `GEMINI_API_KEY` 와 (선택) 업로드 토큰을 채워 넣으면 끝.
+
+### 수동 셋업
+
+`setup.sh` 를 쓰지 않는 경우:
 
 1. 패키지를 설치합니다:
 ```bash
 npm install
 ```
 
-2. 루트 경로에 `.env` 파일을 생성하고 다음 값을 입력합니다 (보안 유지 필수!):
-```env
-# Google Gemini API Key
-GEMINI_API_KEY=your_gemini_api_key_here
+2. whisper.cpp 를 빌드합니다 (Apple Silicon 예):
+```bash
+cd whisper.cpp && cmake -B build -DGGML_METAL=ON && cmake --build build --config Release -j
+bash models/download-ggml-model.sh large-v3-turbo
+```
 
-# Discord Webhook
-DISCORD_WEBHOOK_URL=your_discord_webhook_url_here
-
-# Notion Integration
-NOTION_TOKEN=your_notion_integration_token_here
-NOTION_DATABASE_ID=your_notion_database_id_here
-
-# Github Wiki 
-GITHUB_USERNAME=your_github_username_here
-GITHUB_PAT=your_github_personal_access_token_here
-GITHUB_REPO_NAME=your_repo_name_here
-
-# 운영 모드 세팅 (true 시 전송하지 않고 콘솔에 모의 결괏값만 출력, 운영 시에는 주석 혹은 false)
-TEST_MODE=true
+3. `.env.example` 를 `.env` 로 복사하고 토큰을 채웁니다 (디스코드/노션/위키 토큰은 비워두면 자동 스킵):
+```bash
+cp .env.example .env
 ```
 
 ---
