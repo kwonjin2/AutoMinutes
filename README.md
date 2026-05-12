@@ -137,22 +137,26 @@ PROMPT_PATH=prompts/mentoring.md
 | Linux + NVIDIA CUDA (RTX 4070) | `large-v3-turbo` | ~7분 | 6GB peak |
 | Linux CPU (8-core) | `large-v3-turbo` | ~45분 | 6GB peak |
 
-자동 튜닝 (수동 override 가능):
+자동 튜닝 (수동 override 가능, [`transcribe.js:34-67`](transcribe.js)):
 
-- **동시 워커 수** = `Math.floor((RAM_GB - 4) / 3)` — 인스턴스당 ~2.5GB 가정 + OS 여유 4GB. `WHISPER_CONCURRENCY` 로 override.
-- **whisper 스레드 수** = Apple Silicon 은 P-core 수 (sysctl 자동 감지), 그 외는 `min(논리코어 - 2, 12)`. `WHISPER_THREADS` 로 override.
+- **동시 워커 수** = `clamp(Math.floor((RAM_GB - 4) / 3), 1, 2)` — 인스턴스당 ~2.5GB 가정 + OS 여유 4GB. 코드상 **최대 2 로 clamp** 되며, 더 늘리고 싶으면 `WHISPER_CONCURRENCY` 환경변수로 override.
+- **whisper 스레드 수** =
+  - Apple Silicon: `clamp(P-core수 - 1, 2, 12)` (sysctl `hw.perflevel0.physicalcpu` 자동 감지)
+  - 그 외: `clamp(논리코어 - 2, 2, 12)`
+  - `WHISPER_THREADS` 로 override 가능
 
-> ℹ️ Apple Silicon 의 Metal GPU 는 직렬화되므로 동시 워커를 2 이상으로 늘려도 큰 이득은 없습니다. CUDA / CPU 환경에서는 RAM 만 받쳐주면 4~6 워커까지 효과 있습니다.
+> ℹ️ Apple Silicon 의 Metal GPU 는 직렬화되므로 동시 워커를 2 이상으로 늘려도 큰 이득이 없어 코드에서 의도적으로 2 로 제한합니다. CUDA / CPU 환경에서 더 많은 워커가 필요하면 `WHISPER_CONCURRENCY=4` 처럼 명시적 override.
 
-모델 크기별 트레이드오프:
+모델 크기별 트레이드오프 (setup.sh 의 인터랙티브 선택지와 일치):
 
 | 모델 | 파일 크기 | 한국어 품질 | 권장 용도 |
 |---|---|---|---|
-| `tiny` | 39MB | 낮음 (할루시네이션 많음) | 빠른 검증 (`recordings/README.md` 의 1분 테스트) |
+| `tiny` | 39MB | 매우 낮음 (할루시네이션 많음) | 빠른 검증 (`recordings/README.md` 의 1분 테스트) |
+| `base` | 142MB | 낮음 | 매우 빠른 처리 필요 시 |
 | `small` | 466MB | 중간 | 영어 위주 회의, 빠른 처리 |
-| `medium` | 1.5GB | 높음 | 모바일/저사양 |
-| `large-v3-turbo` (기본) | 1.6GB | 매우 높음, 빠름 | **권장** — 한국어 회의 1차 |
-| `large-v3` | 3.1GB | 가장 높음, 느림 | 최대 품질 필요 시 |
+| `medium` | 1.5GB | 높음 | 모바일/저사양 환경 |
+| `large-v3-turbo` (기본) | 1.5GB | 매우 높음, 빠름 | **권장** — 한국어 회의 1차 |
+| `large-v3` | 2.9GB | 가장 높음, 느림 | 최대 품질 필요 시 |
 
 ---
 
@@ -188,31 +192,56 @@ PROMPT_PATH=prompts/mentoring.md
 
 `npm run start` 실행 후 `archived/<YYYY-MM-DD>/meeting_summary_<HHMMSS>.md` 형식으로 저장됩니다. 구조는 `prompts/default.md` 또는 본인이 지정한 프롬프트에 따라 결정됩니다.
 
-기본 템플릿 출력 예시 (익명화):
+`prompts/default.md` 기준 출력 예시 (익명화):
 
 ```markdown
-# 📝 [회의 제목]
+# 📝 대시보드 UI/UX 및 릴리즈 정책 조율 회의
 
 **참여자:** Alice, Bob, Carol, Dave
-**회의 성격:** 기능 정책 조율 회의
+**회의 성격:** FE+BE 협의 회의
+
+---
 
 ## ⏰ 타임 테이블
+
 - **[00:00 ~ 12:00]** 대시보드 UI 개선 논의 (랭킹/달성률 표시)
 - **[12:00 ~ 25:00]** 모바일 입력 UX 개선 (태그 입력 방식 변경)
 - **[25:00 ~ 종료]** 릴리즈 일정 확정 및 QA 계획
 
+---
+
 ## ✍🏻 회의 안건
-1. 대시보드 시각화 — 달성률 배경 이미지 + 멤버 랭킹 레이아웃
-2. 입력 UI — 엔터 방식 → 추가 버튼 + 모달
-3. 릴리즈 정책 — 5/18 출시, 사용성 테스트 일정 수립
 
-## 🎯 결정 사항
-- [Alice] 대시보드 v2 디자인 5/14 까지 확정
-- [Bob] 태그 입력 컴포넌트 PR 5/15 까지
-- [Carol] QA 시나리오 작성 5/16 까지
+1. 대시보드 시각화 — 달성률 배경 이미지 처리 + 멤버 랭킹 레이아웃
+2. 입력 UI — 엔터 방식 → 추가 버튼 + 모달 (모바일 사용성 개선)
+3. 릴리즈 정책 — 5/18 출시 + 사용성 테스트 일정 수립
 
-## ⚠️ 미해결 이슈
-- 비디오 SDK 의 CSS 커스텀 한계 — 추가 조사 필요
+---
+
+## 🏁 결정 사항
+
+### 1. 대시보드 v2 디자인
+
+- **결정:** Alice 가 5/14 까지 시안 확정
+- **사유/세부:** 달성률에 따른 배경 이미지 (우천/화창) 자동 전환, 멤버 랭킹은 가로 스크롤 → 세로 리스트로 변경 (모바일 우선)
+
+### 2. 태그 입력 UX
+
+- **결정:** Bob 이 5/15 까지 PR
+- **사유/세부:** 엔터 트리거가 모바일 키보드에서 의도치 않게 발생 → 명시적 "추가" 버튼 + 모달 패턴
+
+---
+
+## ✅ TODO 제안 (기술 검토 및 설계 고민)
+
+1. **[QA] 사용성 테스트 시나리오:**
+   - Carol 이 5/16 까지 시나리오 작성, 5/17 dry-run
+2. **[FE] 비디오 SDK CSS 커스텀 한계 조사:**
+   - 추가 조사 후 SDK 교체 or 워크어라운드 결정
+
+---
+
+**멘토 코멘트:** (이번 회의는 일반 회의 — 멘토 미참여)
 ```
 
 화자 이름은 `recordings/<id>-<UserName>.flac` 의 `<UserName>` 부분에서 자동 추출됩니다. 단일 트랙 입력은 `mixed` 라는 단일 라벨로 처리됩니다.

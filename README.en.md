@@ -133,22 +133,26 @@ Processing time for a 5-hour, 4-speaker multi-track meeting (FLAC input):
 | Linux + NVIDIA CUDA (RTX 4070) | `large-v3-turbo` | ~7 min | 6 GB |
 | Linux CPU (8-core) | `large-v3-turbo` | ~45 min | 6 GB |
 
-Auto-tuning (manually overridable):
+Auto-tuning (manually overridable, [`transcribe.js:34-67`](transcribe.js)):
 
-- **Concurrent workers** = `Math.floor((RAM_GB - 4) / 3)` — ~2.5 GB per instance + 4 GB OS headroom. Override with `WHISPER_CONCURRENCY`.
-- **Whisper threads** = on Apple Silicon, the P-core count (sysctl auto-detect); elsewhere `min(logical_cores - 2, 12)`. Override with `WHISPER_THREADS`.
+- **Concurrent workers** = `clamp(Math.floor((RAM_GB - 4) / 3), 1, 2)` — ~2.5 GB per instance + 4 GB OS headroom. The code **caps at 2 workers**; override with `WHISPER_CONCURRENCY` if you need more.
+- **Whisper threads** =
+  - Apple Silicon: `clamp(P-cores - 1, 2, 12)` (auto-detected via sysctl `hw.perflevel0.physicalcpu`)
+  - Elsewhere: `clamp(logical_cores - 2, 2, 12)`
+  - Override with `WHISPER_THREADS`
 
-> ℹ️ Apple Silicon's Metal GPU is serialized, so raising concurrency above 2 doesn't help much. On CUDA/CPU, 4–6 workers scale well as long as RAM allows.
+> ℹ️ Apple Silicon's Metal GPU is serialized, so adding more workers above 2 doesn't help — the cap is intentional. On CUDA/CPU, override with e.g. `WHISPER_CONCURRENCY=4` if you want more parallelism.
 
-Model trade-offs:
+Model trade-offs (matches the `setup.sh` interactive picker):
 
 | Model | File size | Korean quality | Recommended use |
 |---|---|---|---|
-| `tiny` | 39 MB | Low (frequent hallucinations) | Quick validation (`recordings/README.md` 1-min test) |
+| `tiny` | 39 MB | Very low (frequent hallucinations) | Quick validation (`recordings/README.md` 1-min test) |
+| `base` | 142 MB | Low | When max throughput is needed |
 | `small` | 466 MB | Medium | English-heavy meetings, fast processing |
-| `medium` | 1.5 GB | High | Mobile / low-RAM |
-| `large-v3-turbo` (default) | 1.6 GB | Very high, fast | **Recommended** — primary for Korean meetings |
-| `large-v3` | 3.1 GB | Highest, slower | When peak quality matters |
+| `medium` | 1.5 GB | High | Mobile / low-RAM environments |
+| `large-v3-turbo` (default) | 1.5 GB | Very high, fast | **Recommended** — primary for Korean meetings |
+| `large-v3` | 2.9 GB | Highest, slower | When peak quality matters |
 
 ---
 
@@ -184,31 +188,56 @@ Model trade-offs:
 
 After `npm run start`, a summary is saved to `archived/<YYYY-MM-DD>/meeting_summary_<HHMMSS>.md`. Structure depends on `prompts/default.md` or your custom prompt.
 
-Default-template example (anonymized):
+Example output using `prompts/default.md` (anonymized):
 
 ```markdown
-# 📝 [Meeting Title]
+# 📝 Dashboard UI/UX and Release Policy Alignment
 
 **Participants:** Alice, Bob, Carol, Dave
-**Type:** Feature policy alignment meeting
+**Type:** FE+BE alignment meeting
+
+---
 
 ## ⏰ Timeline
+
 - **[00:00 ~ 12:00]** Dashboard UI improvements (ranking / progress display)
 - **[12:00 ~ 25:00]** Mobile input UX (tag-input pattern change)
 - **[25:00 ~ end]** Release schedule finalization + QA plan
 
+---
+
 ## ✍🏻 Agenda
-1. Dashboard visualization — progress-based backgrounds + member ranking layout
-2. Input UI — Enter-to-submit → "Add" button + modal
-3. Release policy — ship 5/18, usability-testing plan
 
-## 🎯 Decisions
-- [Alice] Dashboard v2 design finalized by 5/14
-- [Bob] Tag-input component PR by 5/15
-- [Carol] QA scenarios drafted by 5/16
+1. Dashboard visualization — progress-based background images + member-ranking layout
+2. Input UI — Enter-to-submit → explicit "Add" button + modal (mobile UX)
+3. Release policy — ship 5/18 + usability-testing plan
 
-## ⚠️ Open Issues
-- Video SDK's CSS customization limits — needs investigation
+---
+
+## 🏁 Decisions
+
+### 1. Dashboard v2 design
+
+- **Decision:** Alice finalizes the design by 5/14
+- **Rationale/details:** Achievement-based background image switching (rainy/sunny); member ranking changes from horizontal scroll → vertical list (mobile-first)
+
+### 2. Tag-input UX
+
+- **Decision:** Bob ships a PR by 5/15
+- **Rationale/details:** Enter-to-submit on mobile triggers accidentally; explicit "Add" button + modal pattern is clearer
+
+---
+
+## ✅ TODOs (technical follow-ups)
+
+1. **[QA] Usability-testing scenarios:**
+   - Carol drafts scenarios by 5/16, dry-run on 5/17
+2. **[FE] Video SDK CSS customization limits:**
+   - Investigate further before deciding SDK swap vs workaround
+
+---
+
+**Mentor commentary:** (this was a regular meeting — no mentor present)
 ```
 
 Speaker names are auto-extracted from `recordings/<id>-<UserName>.flac` (the `<UserName>` part). Single-track inputs are labeled `mixed`.
