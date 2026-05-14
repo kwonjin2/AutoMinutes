@@ -132,8 +132,8 @@ PROMPT_PATH=prompts/mentoring.md
 
 | 환경 | 모델 | 처리 시간 | RAM 사용 |
 |---|---|---|---|
-| Apple Silicon (M3 Pro, Metal) | `large-v3-turbo` | **~10분** | 8GB peak |
-| Apple Silicon (M3 Pro, Metal) | `medium` | ~6분 | 5GB peak |
+| Apple Silicon (M4 Pro, Metal) | `large-v3-turbo` | **~10분** | 8GB peak |
+| Apple Silicon (M4 Pro, Metal) | `medium` | ~6분 | 5GB peak |
 | Linux + NVIDIA CUDA (RTX 4070) | `large-v3-turbo` | ~7분 | 6GB peak |
 | Linux CPU (8-core) | `large-v3-turbo` | ~45분 | 6GB peak |
 
