@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# meeting-ai setup — 플랫폼 자동 감지 + 의존성 자동 설치 + whisper.cpp 빌드 + 모델 선택
+# AutoMinutes setup — 플랫폼 자동 감지 + 의존성 자동 설치 + whisper.cpp 빌드 + 모델 선택
 #
 # 사용법:
 #   ./setup.sh                       # 인터랙티브 모델 선택 + 누락 의존성 자동 설치
