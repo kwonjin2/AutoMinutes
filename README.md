@@ -248,6 +248,15 @@ PROMPT_PATH=prompts/mentoring.md
 
 ---
 
+## 📚 프로젝트 문서 (Project Documents)
+
+이 프로젝트가 어떻게 만들어졌는지 궁금하다면:
+
+- **[docs/PRD.md](docs/PRD.md)** — v1.0 OSS 공개 기준 제품 요구사항 정의서. 목표·비목표·수용 기준(S1~S10)·도메인 모델·평가 원칙.
+- **[docs/AI-WORKFLOW.md](docs/AI-WORKFLOW.md)** — AI 코딩 툴(Claude Code · Ouroboros) 활용 회고. Phase A (Claude Code 단독으로 파이프라인 구축) → Phase B (Ouroboros 보조로 1.5일 만에 OSS 공개 준비) 의 2단계 구조.
+
+---
+
 ## 📜 라이선스 (License)
 
 MIT 라이선스 — 자세한 내용은 [LICENSE](LICENSE) 파일 참고.
