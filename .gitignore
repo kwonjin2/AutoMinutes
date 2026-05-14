@@ -37,3 +37,6 @@ temp_chunks/
 # Media
 *.wav
 *.flac
+
+# Ouroboros — 1회성 평가 산출물 (시드 yaml 은 트래킹)
+.ouroboros_eval_artifact.md

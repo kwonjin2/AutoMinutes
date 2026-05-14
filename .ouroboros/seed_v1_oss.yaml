@@ -1,0 +1,167 @@
+goal: >-
+  멀티/단일트랙 회의 오디오를 로컬 whisper.cpp Metal/CUDA로 전사·요약하고
+  선택적으로 Notion/Discord/Wiki에 업로드하는 파이프라인을, setup.sh + npm run doctor
+  한 번으로 1시간 내 셋업 가능한 OSS(MIT) v1.0으로 공개
+
+constraints:
+  - 로컬 실행 only (SaaS / 클라우드 인프라 없음)
+  - whisper.cpp 로컬 가속 유지 (Apple Silicon Metal + Linux CUDA/CPU 자동 감지)
+  - Craig 종속성 제거 (입력은 "화자별 파일 N개" 또는 "단일 트랙 1개" 계약)
+  - 신규 사용자가 README + setup.sh로 1시간 내 첫 회의록 생성 성공
+  - Node.js >= 18, ffmpeg, whisper.cpp 빌드는 setup.sh가 처리
+  - 라이선스 MIT
+  - 코드 구조는 현재 평평한 5개 .js 유지 (큰 리팩토링 X)
+  - prompt.md는 외부화 (PROMPT_PATH env var)
+  - 업로드 모듈은 .env 토큰 부재 시 자동 스킵
+
+acceptance_criteria:
+  - "S1: 5h 4-화자 멀티트랙 회의 ~10분 이내 처리 (Mode A 회귀 없음)"
+  - "S2: 단일 트랙 입력(mp3/wav/flac) 자동 감지, mixed 단일 라벨로 처리, 검증된 6/7 기준 멀티트랙 동등 품질"
+  - "S3: Notion/Discord/Wiki 각각 .env 토큰 부재 시 자동 스킵 + 로그로 알림"
+  - "S4: README + setup.sh 따라 처음 본 개발자가 1시간 내 첫 회의록 생성 성공"
+  - "S5: setup.sh 실행 시 모델 인터랙티브 선택 (tiny/base/small/medium/large/large-v3-turbo)"
+  - "S6: setup.sh가 Mac(Apple Silicon)/Linux(CUDA 또는 CPU) 자동 감지 후 whisper.cpp 빌드"
+  - "S7: npm run doctor가 모든 의존성(node/ffmpeg/whisper-cli/모델/.env) 누락을 정확히 보고"
+  - "S8: prompt.md를 PROMPT_PATH env로 외부화, prompts/default.md + prompts/mentoring.md 예시 제공"
+  - "S9: WHISPER_LANG env var 지원 (기본 'auto')"
+  - "S10: LICENSE 파일 MIT, README 영어 1차 번역(혹은 영어 README 별도) 포함"
+
+ontology_schema:
+  name: MeetingPipeline
+  description: 회의 오디오 입력에서 마크다운 요약 + 선택적 외부 업로드까지의 파이프라인 도메인 모델
+  fields:
+    - name: recordings_dir
+      type: string
+      description: 입력 오디오 파일 디렉토리 (멀티트랙 N개 또는 단일트랙 1개)
+    - name: input_tracks
+      type: array
+      description: 처리할 오디오 파일 목록 (flac/wav/mp3 자동 감지)
+    - name: platform_info
+      type: object
+      description: setup.sh가 감지한 환경 (os/arch/gpu_backend)
+    - name: whisper_model
+      type: string
+      description: ggml 모델 파일명 (기본 ggml-large-v3-turbo.bin, .env로 변경)
+    - name: whisper_lang
+      type: string
+      description: WHISPER_LANG env (기본 'auto')
+    - name: conversation_segments
+      type: array
+      description: "[{start, speaker, text}] 시간순 정렬 + 중복 제거된 발화 세그먼트"
+    - name: prompt_template_path
+      type: string
+      description: PROMPT_PATH env가 가리키는 LLM 요약 prompt 파일
+    - name: summary_markdown
+      type: string
+      description: summarize 산출 회의록 md
+    - name: upload_targets
+      type: array
+      description: 활성화된 업로드 타겟 (.env 토큰 유무로 자동 결정)
+    - name: doctor_report
+      type: object
+      description: npm run doctor가 보고하는 의존성 체크 결과
+
+evaluation_principles:
+  - name: transcription_fidelity
+    description: 전사 정확도, 한국어/다국어 인식 품질, 할루시네이션 제거
+    weight: 0.25
+  - name: summary_completeness
+    description: 요약이 회의 결정·액션·안건·타임라인을 누락 없이 캡처
+    weight: 0.25
+  - name: setup_simplicity
+    description: 신규 사용자 1시간 내 첫 실행 성공 (S4)
+    weight: 0.20
+  - name: backward_compat
+    description: Mode A 멀티트랙 회귀 없음 (5h→~10분)
+    weight: 0.15
+  - name: platform_portability
+    description: Mac(Apple Silicon) + Linux(CUDA/CPU) 자동 감지 동작
+    weight: 0.10
+  - name: oss_health
+    description: MIT 라이선스, .env.example, 명확한 PR/issue 가이드, 영어 README
+    weight: 0.05
+
+exit_conditions:
+  - name: v1_ship
+    description: v1.0 GitHub release 게시
+    criteria: setup.sh + npm run doctor + 입력 표준화 + 업로드 토글 + 외부 prompt + MIT + 영어 README 모두 충족
+  - name: regression_blocker
+    description: Mode A 회귀 발견 시 release 차단
+    criteria: 5h 회의 처리 시간이 15분 초과하거나 출력 마크다운 형식이 변경됨
+  - name: scope_creep_block
+    description: out-of-scope 항목이 v1.0 PR로 유입되면 reject
+    criteria: Mode B(diarization)/Docker/Windows 공식 지원/SaaS 관련 변경
+
+out_of_scope:
+  - Mode B (단일트랙 + diarization) - 검증 후 폐기, v1.1 재검토 가능
+  - Docker (Apple Silicon Metal 가속 무효화)
+  - Windows 공식 지원 (v2.0 또는 community PR)
+  - SaaS / 결제 / 멀티테넌시 / 인증
+  - 자체 녹음 도구 (데스크탑 앱)
+  - Craig 자동 다운로드
+  - 추가 속도 최적화 (정확도 트레이드오프 한계 도달)
+  - 큰 코드 구조 리팩토링 (평평한 5개 .js 유지)
+
+project_type: brownfield
+
+context_references:
+  - path: run_all.js
+    role: primary
+    summary: 5단계 파이프라인 오케스트레이션 진입점 (transcribe → summarize → discord → notion → wiki)
+  - path: transcribe.js
+    role: primary
+    summary: whisper.cpp 호출, concurrency/threads 자동 튜닝, 할루시네이션 필터, 멀티트랙 입력 처리
+  - path: summarize.js
+    role: primary
+    summary: prompt.md 기반 LLM 요약
+  - path: notion.js
+    role: primary
+    summary: Notion 업로드 (현재 토글 없음 — v1.0에서 토큰 부재 시 자동 스킵 추가)
+  - path: discord.js
+    role: primary
+    summary: Discord 업로드 (현재 토글 없음 — v1.0에서 토큰 부재 시 자동 스킵 추가)
+  - path: github_wiki.js
+    role: primary
+    summary: GitHub Wiki 업데이트 (현재 토글 없음 — v1.0에서 토큰 부재 시 자동 스킵 추가)
+  - path: prompt.md
+    role: reference
+    summary: 본인 팀 ID 박힌 현재 prompt — v1.0에서 prompts/default.md로 외부화 + 팀 ID 제거
+  - path: package.json
+    role: reference
+    summary: npm scripts 진입점 (start, transcribe, summarize, ...) — v1.0에서 doctor 추가
+  - path: whisper.cpp/
+    role: reference
+    summary: 벤더링된 whisper-cli 빌드 + ggml 모델 경로
+  - path: CLAUDE.md
+    role: reference
+    summary: 이번 setup 세션에서 추가된 Ouroboros 참조 블록
+
+existing_patterns:
+  - npm scripts orchestration (run_all.js → execSync 'npm run X')
+  - 평평한 5개 .js 모듈 (단계별 1 파일 책임)
+  - concurrency = Math.floor((totalGB - 4) / 3) 메모리 기반 동시 whisper 워커 수
+  - threads = Apple Silicon P-core 우선 (sysctl hw.perflevel0.physicalcpu)
+  - 화자 식별자 = 파일명 split('-')[1:].join('-') (Craig 멀티트랙 명명규칙)
+  - 할루시네이션 필터 = BANNED_PHRASES + 시간 윈도우 기반 중복 제거
+  - process.exitCode = 1 에러 전파 (커밋 d7dc92a 패턴)
+  - 입력 FLAC → 16kHz mono PCM WAV (ffmpeg) → whisper-cli JSON
+
+existing_dependencies:
+  - whisper.cpp (vendored, Metal 빌드 활성)
+  - ggml-large-v3-turbo.bin (~3GB, setup.sh가 인터랙티브 다운로드)
+  - ffmpeg (호스트 의존)
+  - nodejs >= 18
+  - "(선택) Notion API SDK"
+  - "(선택) Discord webhook"
+  - "(선택) GitHub API (Wiki 업데이트)"
+
+metadata:
+  version: v1.0
+  generated_at: 2026-05-12
+  interview_session: ouroboros-tutorial-then-interview-2026-05-12
+  ambiguity_score: 0.10
+  ambiguity_trajectory: 0.85 → 0.25 → 0.10
+  notes: |
+    Mode B(diarization)는 데이터 기반 검증(멀티트랙 vs 단일트랙 6+1 기준 비교)에서
+    멀티트랙 대비 6/7 기준 동등 또는 우수 → 폐기 결정. 2주 작업 + Python/pyannote/HF
+    토큰 영구 의존성 절약. v1.1에서 멘토링 회의 시나리오 추가 검증 시 재검토 가능.
