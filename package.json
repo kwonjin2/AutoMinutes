@@ -1,5 +1,5 @@
 {
-  "name": "meeting-ai",
+  "name": "autominutes",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -15,16 +15,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kwonjin2/whisper.git"
+    "url": "git+https://github.com/kwonjin2/AutoMinutes.git"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/kwonjin2/whisper/issues"
+    "url": "https://github.com/kwonjin2/AutoMinutes/issues"
   },
-  "homepage": "https://github.com/kwonjin2/whisper#readme",
+  "homepage": "https://github.com/kwonjin2/AutoMinutes#readme",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@notionhq/client": "^5.13.0",

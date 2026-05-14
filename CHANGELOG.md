@@ -25,7 +25,7 @@ backward compatible — 기존 사용자는 별도 액션 불필요.
 
 ## [1.0.0] — 2026-05-12
 
-**meeting-ai v1.0** — OSS(MIT) 초기 공개 릴리스. 시드 `seed_v1_oss.yaml` 의 v1.0 acceptance criteria 충족.
+**AutoMinutes v1.0** — OSS(MIT) 초기 공개 릴리스. 시드 `seed_v1_oss.yaml` 의 v1.0 acceptance criteria 충족.
 
 ### Added (신규)
 - **`setup.sh`** — Mac(Apple Silicon Metal)/Linux(CUDA·CPU) 자동 감지 + whisper.cpp 빌드 + 인터랙티브 모델 선택 + npm install + `.env` 초기화 일괄 처리 (#5)
@@ -67,5 +67,5 @@ backward compatible — 기존 사용자는 별도 액션 불필요.
 | S9 | WHISPER_LANG env | #9 |
 | S10 | MIT + 영어 README | #11, #13 |
 
-[1.0.1]: https://github.com/kwonjin2/whisper/releases/tag/v1.0.1
-[1.0.0]: https://github.com/kwonjin2/whisper/releases/tag/v1.0.0
+[1.0.1]: https://github.com/kwonjin2/AutoMinutes/releases/tag/v1.0.1
+[1.0.0]: https://github.com/kwonjin2/AutoMinutes/releases/tag/v1.0.0

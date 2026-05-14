@@ -1,6 +1,6 @@
-# AI 코딩 툴 활용 회고 — meeting-ai
+# AI 코딩 툴 활용 회고 — AutoMinutes
 
-> 1인 개발자가 AI 코딩 툴(Claude Code · Ouroboros) 로 meeting-ai 를 어떻게 만들었는가에 대한 기록.
+> 1인 개발자가 AI 코딩 툴(Claude Code · Ouroboros) 로 AutoMinutes 를 어떻게 만들었는가에 대한 기록.
 
 이 프로젝트는 **두 단계** 로 만들어졌습니다.
 

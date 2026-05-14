@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// meeting-ai doctor — 의존성/설정 헬스 체크.
+// AutoMinutes doctor — 의존성/설정 헬스 체크.
 // 필수 항목 누락 시 exit 1, 선택 항목만 비어 있으면 exit 0 (자동 스킵 예정).
 //
 // 사용:
@@ -183,7 +183,7 @@ function which(cmd) {
 
 // --- 출력 ---
 const headerBar = "━".repeat(60);
-console.log(`\n${C.bold}meeting-ai doctor${C.reset}`);
+console.log(`\n${C.bold}AutoMinutes doctor${C.reset}`);
 console.log(headerBar);
 const nameWidth = Math.max(...results.map((r) => r.name.length));
 let requiredFail = 0;

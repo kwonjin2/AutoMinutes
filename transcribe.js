@@ -131,7 +131,7 @@ async function transcribeFile(file) {
   // 임시 WAV 는 tmpdir 에 두어 입력이 .wav 일 때 원본과 충돌하지 않게 한다.
   const wavPath = path.join(
     os.tmpdir(),
-    `meeting-ai-${process.pid}-${baseName}.wav`,
+    `autominutes-${process.pid}-${baseName}.wav`,
   );
   console.log(`${prefix} 🎵 변환 중 (16kHz mono WAV)...`);
 

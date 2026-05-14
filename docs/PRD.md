@@ -1,17 +1,17 @@
-# meeting-ai — Product Requirements Document (PRD)
+# AutoMinutes — Product Requirements Document (PRD)
 
 > v1.0 OSS 공개 기준 PRD. 원본 명세는 [`.ouroboros/seed_v1_oss.yaml`](../.ouroboros/seed_v1_oss.yaml) 이며, 본 문서는 평가/리뷰 목적으로 사람이 읽기 좋은 형태로 변환한 사본입니다.
 
 - **버전**: v1.0 (현재 출시본 v1.0.1)
 - **작성일**: 2026-05-12
 - **작성자**: kwonjin2 (1인 개발)
-- **상태**: Shipped — GitHub release [v1.0.1](https://github.com/kwonjin2/whisper/releases/tag/v1.0.1)
+- **상태**: Shipped — GitHub release [v1.0.1](https://github.com/kwonjin2/AutoMinutes/releases/tag/v1.0.1)
 
 ---
 
 ## 1. 개요 (Executive Summary)
 
-**meeting-ai** 는 회의 오디오를 입력하면 화자별 텍스트 전사 → AI 요약 → 팀 채널(Discord/Notion/GitHub Wiki) 업로드까지 자동화하는 **로컬 실행 파이프라인**입니다.
+**AutoMinutes** 는 회의 오디오를 입력하면 화자별 텍스트 전사 → AI 요약 → 팀 채널(Discord/Notion/GitHub Wiki) 업로드까지 자동화하는 **로컬 실행 파이프라인**입니다.
 
 - `setup.sh` 한 번 + `npm run doctor` 한 번 → 1시간 내 첫 회의록 생성.
 - 클라우드/SaaS 없이 **로컬 whisper.cpp** (Apple Silicon Metal · Linux CUDA·CPU 자동 감지) 로 동작.
