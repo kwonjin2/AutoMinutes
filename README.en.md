@@ -7,13 +7,16 @@
 ---
 
 ## ✨ Features
-1. **Audio conversion & transcription (`transcribe.js`)**:
+1. **Meeting recording (`record.js`)** — optional:
+   - Records a Discord voice channel directly with **your own Discord bot** — no external recording bot (Craig, etc.) — saving per-speaker tracks straight into `recordings/`.
+   - A single `/record stop` auto-runs the transcribe→summarize→upload pipeline below. (See "🎙️ Meeting recording".)
+2. **Audio conversion & transcription (`transcribe.js`)**:
    - Auto-converts multi-track recordings (`.flac`, `.wav`, `.mp3`) — e.g. from Discord — into 16kHz mono WAV using FFmpeg.
    - Uses the `whisper.cpp` C++ core engine with GPU acceleration for fast, per-speaker transcription.
-2. **AI summarization (`summarize.js`)**:
+3. **AI summarization (`summarize.js`)**:
    - Generates a Markdown summary (`meeting_summary.md`) from the transcribed text (`meeting_with_speakers.txt`) via Google Gemini API (Gemini 3 Flash).
    - Summary prompts live in `prompts/`; swap them via the `PROMPT_PATH` env var (see "Prompt Customization" below).
-3. **Upload automation (`discord.js`, `notion.js`, `github_wiki.js`)**:
+4. **Upload automation (`discord.js`, `notion.js`, `github_wiki.js`)**:
    - Distributes the summary to your team channels.
    - 🚨 Enable `TEST_MODE` to prevent mock data from hitting production channels.
 
@@ -76,9 +79,53 @@ cp .env.example .env
 
 ---
 
+## 🎙️ Meeting recording (Discord bot) — optional
+
+Record a Discord voice channel directly with **your own Discord bot** — no external recording bot (Craig, etc.) — saving per-speaker tracks straight into `recordings/`, and auto-run the transcribe→summarize→upload pipeline on `/record stop`.
+
+> ⚠️ **Each user must create their own bot.** A bot token is a secret and cannot be shared, and the bot instance has to run on your own machine to join voice channels (same self-hosting principle as the rest of this project). If you skip this feature, just drop recording files manually via the "Manual" option in [Usage](#-usage) below.
+
+### 1) Create a Discord bot (one-time, ~10 min)
+
+1. [Discord Developer Portal](https://discord.com/developers/applications) → **New Application**.
+2. Left sidebar **Bot** → **Reset Token** and copy it (it won't be shown again — Reset if lost).
+3. On the same **Bot** page:
+   - Turn **Privileged Gateway Intents → SERVER MEMBERS INTENT** **ON** (for speaker-name mapping), then **Save Changes**.
+   - Keep **Requires OAuth2 Code Grant** **OFF** (if ON, invites fail with `Integration requires code grant`).
+4. Open the invite URL below in a browser, replacing `<CLIENT_ID>` with your app's **Application ID** (top of the OAuth2 page), then pick a server and **Authorize**:
+   ```
+   https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&permissions=3146752&scope=bot+applications.commands
+   ```
+   - `permissions=3146752` = **View Channels + Connect + Speak** (minimum permissions for recording). Redirect URIs are not needed for a bot invite — ignore them.
+
+### 2) Configure the token
+
+Add the token to `.env` (this is **completely separate** from the upload `DISCORD_WEBHOOK_URL`):
+```env
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
+```
+
+### 3) Record
+
+```bash
+npm run record
+```
+When `🟢 준비 완료` (ready) appears the bot is live (keep this terminal open during the meeting). Then in Discord:
+
+1. **Join a voice channel**
+2. `/record start` — the bot joins; a per-speaker track is created as soon as someone talks.
+3. `/record stop` — the bot leaves, tracks are saved as `recordings/1-name.flac`, and **`npm run start`** (transcribe→summarize→upload) runs automatically.
+
+> ℹ️ Starting a new recording does not delete existing audio — it is backed up to `recordings/_archive_<timestamp>/` so only this meeting's tracks are transcribed. Participants who never speak get no track.
+
+---
+
 ## 🚀 Usage
 
-Create a `recordings/` folder in the project root and drop per-speaker files named like `1234-UserName.flac`, then run the scripts.
+Put your meeting audio in the `recordings/` folder, then run the scripts. There are two ways to get the audio in there:
+
+- **Automatic**: record with the Discord bot above ([🎙️ Meeting recording](#-meeting-recording-discord-bot--optional)) — `recordings/` fills itself.
+- **Manual**: drop per-speaker files named like `1234-UserName.flac` (e.g. from Craig or another recorder) directly into the folder.
 
 Supported input extensions: `.flac` / `.wav` / `.mp3` (case-insensitive). FFmpeg normalizes them to 16kHz mono WAV inside the pipeline — original files are preserved.
 
@@ -181,6 +228,15 @@ Model trade-offs (matches the `setup.sh` interactive picker):
 
 ### Q. Transcripts look wrong (hallucinations, repeated text)
 **A.** This usually happens when input audio has long silent stretches or low SNR. Remove silence with FFmpeg and retry: `ffmpeg -i raw.wav -af "silenceremove=stop_periods=-1:stop_duration=1:stop_threshold=-30dB" recordings/single.wav`. Or use a larger model (`large-v3`).
+
+### Q. (recording bot) Invite fails with `Integration requires code grant`
+**A.** In the Developer Portal → **Bot** page, turn the **Requires OAuth2 Code Grant** toggle **OFF**, save, then reopen the invite URL.
+
+### Q. (recording bot) The `/record` command doesn't show up in Discord
+**A.** The bot must be running (`npm run record`) and the console must show a `커맨드 등록: <server>` (command registered) log. Guild slash commands usually appear instantly.
+
+### Q. (recording bot) I ran `/record start` but no tracks (.flac) are created
+**A.** Check that (1) **SERVER MEMBERS INTENT** is ON (Developer Portal → Bot), and (2) the command runner is **actually in a voice channel**. Participants who never speak get no track (by design).
 
 ---
 
