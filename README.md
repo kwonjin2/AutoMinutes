@@ -7,13 +7,16 @@
 ---
 
 ## ✨ Features (주요 기능)
-1. **오디오 변환 및 전사 (`transcribe.js`)**:
+1. **회의 녹음 자동화 (`record.js`)** — 선택:
+   - 외부 녹음 봇(Craig 등) 없이, **자기 소유의 Discord 봇**으로 음성 채널을 직접 녹음하고 화자별 트랙을 `recordings/` 에 바로 저장합니다.
+   - `/record stop` 한 번이면 아래 전사→요약→업로드 파이프라인까지 자동 실행됩니다. (아래 "🎙️ 회의 녹음 자동화" 참고)
+2. **오디오 변환 및 전사 (`transcribe.js`)**:
    - 디스코드 등에서 녹음된 다중 트랙 음성(`.flac`, `.wav`, `.mp3`)을 16kHz mono WAV 로 자동 변환합니다. (FFmpeg 사용)
    - C++ 코어 엔진인 `whisper.cpp` 모델을 사용하여 GPU 기반의 압도적인 속도로 한국어 음성 화자분리 텍스트를 생성합니다.
-2. **AI 요약 생성 (`summarize.js`)**:
+3. **AI 요약 생성 (`summarize.js`)**:
    - 전사된 텍스트(`meeting_with_speakers.txt`)를 Google Gemini API (Gemini 3 Flash)를 이용해 요약본 마크다운(`meeting_summary.md`)으로 생성합니다.
    - 요약 프롬프트는 `prompts/` 폴더에서 관리하며 `PROMPT_PATH` 환경변수로 교체할 수 있습니다 (아래 "프롬프트 커스터마이징" 참고).
-3. **업로드 자동화 (`discord.js`, `notion.js`, `github_wiki.js`)**:
+4. **업로드 자동화 (`discord.js`, `notion.js`, `github_wiki.js`)**:
    - 요약본을 서버로 발송합니다.
    - 🚨 `TEST_MODE` 활성화를 통해 서비스 운영망에 모의 데이터가 전송되는 것을 방어할 수 있습니다.
 
@@ -76,9 +79,53 @@ cp .env.example .env
 
 ---
 
+## 🎙️ 회의 녹음 자동화 (Discord 봇) — 선택
+
+Craig 같은 외부 녹음 봇 없이, **자기 소유의 Discord 봇**으로 음성 채널을 직접 녹음해 화자별 트랙을 `recordings/` 에 바로 저장하고, `/record stop` 시 전사→요약→업로드 파이프라인까지 자동 실행합니다.
+
+> ⚠️ **봇은 각 사용자가 직접 만들어야 합니다.** 봇 토큰은 비밀값이라 공유할 수 없고, 봇 인스턴스는 본인 PC 에서 직접 띄워야 음성 채널에 들어갑니다 (이 프로젝트의 셀프 호스팅 원칙과 동일). 이 기능을 안 쓰면 아래 [Usage](#-usage-사용-가이드) 의 "수동" 방식으로 녹음 파일만 넣어도 됩니다.
+
+### 1) Discord 봇 만들기 (최초 1회, ~10분)
+
+1. [Discord Developer Portal](https://discord.com/developers/applications) → **New Application** 생성.
+2. 좌측 **Bot** → **Reset Token** 으로 토큰 발급 후 복사 (이 화면을 벗어나면 다시 안 보이니, 잃어버리면 다시 Reset).
+3. 같은 **Bot** 페이지에서:
+   - **Privileged Gateway Intents → SERVER MEMBERS INTENT** 를 **ON** (화자 이름 매핑용) 한 뒤 **Save Changes**.
+   - **Requires OAuth2 Code Grant** 는 **OFF** (켜져 있으면 초대 시 `Integration requires code grant` 에러).
+4. 아래 초대 URL 의 `<CLIENT_ID>` 를 본인 앱의 **Application ID**(OAuth2 페이지 상단) 로 바꿔 브라우저에서 열고, 봇을 넣을 서버를 선택해 **승인**:
+   ```
+   https://discord.com/oauth2/authorize?client_id=<CLIENT_ID>&permissions=3146752&scope=bot+applications.commands
+   ```
+   - `permissions=3146752` = **채널 보기 + 연결 + 말하기** (녹음에 필요한 최소 권한). 리디렉션 URI 는 봇 초대에 필요 없으니 무시하세요.
+
+### 2) 토큰 설정
+
+`.env` 에 발급받은 토큰을 추가합니다 (업로드용 `DISCORD_WEBHOOK_URL` 과는 **완전히 별개**):
+```env
+DISCORD_BOT_TOKEN=your_discord_bot_token_here
+```
+
+### 3) 녹음 실행
+
+```bash
+npm run record
+```
+`🟢 준비 완료` 가 뜨면 봇이 살아있는 것입니다 (이 터미널은 회의 동안 켜둡니다). 이후 Discord 에서:
+
+1. **음성 채널 입장**
+2. `/record start` — 봇이 입장하고, 말하는 사람부터 화자별 트랙이 자동 생성됩니다.
+3. `/record stop` — 봇이 나가고, `recordings/` 에 `1-이름.flac` 형식으로 저장된 뒤 **자동으로 `npm run start`** (전사→요약→업로드) 가 실행됩니다.
+
+> ℹ️ 새 녹음을 시작하면 `recordings/` 의 기존 오디오는 삭제되지 않고 `recordings/_archive_<시각>/` 로 백업된 뒤, 이번 회의 트랙만 전사됩니다. 한 번도 말하지 않은 참가자는 트랙이 생성되지 않습니다.
+
+---
+
 ## 🚀 Usage (사용 가이드)
 
-프로젝트 폴더 안에 `recordings/` 폴더를 만들고, 화자별 분류가 끝난 `1234-UserName.flac` 형식의 파일들을 넣은 뒤 스크립트를 실행합니다.
+회의 오디오를 `recordings/` 폴더에 둔 뒤 스크립트를 실행합니다. 오디오를 얻는 방법은 두 가지입니다:
+
+- **자동**: 위 [🎙️ 회의 녹음 자동화](#-회의-녹음-자동화-discord-봇--선택) 의 Discord 봇으로 녹음하면 `recordings/` 가 자동으로 채워집니다.
+- **수동**: Craig 등 다른 녹음기로 받은 화자별 `1234-UserName.flac` 형식의 파일을 직접 넣습니다.
 
 지원하는 입력 확장자는 `.flac` / `.wav` / `.mp3` 세 가지입니다 (대소문자 무관). 파이프라인 내부에서 FFmpeg 가 16kHz mono WAV 로 자동 정규화한 뒤 whisper-cli 에 넘기므로 원본 파일은 그대로 유지됩니다.
 
@@ -185,6 +232,15 @@ PROMPT_PATH=prompts/mentoring.md
 
 ### Q. 전사 결과가 이상해요 (할루시네이션, 반복 텍스트)
 **A.** 입력 오디오의 무음 구간이 길거나 SNR 이 낮을 때 발생. FFmpeg 로 무음 구간 제거 후 재시도: `ffmpeg -i raw.wav -af "silenceremove=stop_periods=-1:stop_duration=1:stop_threshold=-30dB" recordings/single.wav`. 또는 더 큰 모델 (`large-v3`) 사용.
+
+### Q. (녹음 봇) 봇 초대 시 `Integration requires code grant` 에러가 떠요
+**A.** Developer Portal → **Bot** 페이지의 **Requires OAuth2 Code Grant** 토글을 **OFF** 로 바꿔 저장한 뒤 초대 URL 을 다시 여세요.
+
+### Q. (녹음 봇) `/record` 커맨드가 Discord 에 안 보여요
+**A.** `npm run record` 로 봇이 켜져 있어야 하고, 콘솔에 `커맨드 등록: <서버명>` 로그가 떠야 합니다. 길드 슬래시 커맨드는 보통 즉시 반영됩니다.
+
+### Q. (녹음 봇) `/record start` 했는데 트랙(.flac)이 안 생겨요
+**A.** (1) Developer Portal → Bot → **SERVER MEMBERS INTENT** 가 ON 인지, (2) 명령 실행자가 **음성 채널에 입장한 상태**인지 확인하세요. 한 번도 말하지 않은 참가자는 트랙이 생성되지 않습니다(의도된 동작).
 
 ---
 
