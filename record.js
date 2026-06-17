@@ -133,6 +133,19 @@ function startUserTrack(userId, displayName) {
     track.pcmWritten += chunk.length;
   });
 
+  // Discord 음성 수신은 화자 발화 경계·패킷 유실 등에서 간헐적으로 깨진
+  // Opus 패킷을 흘려보낸다. 네이티브 디코더는 이때 'error' 를 throw 하는데,
+  // 리스너가 없으면 Node 가 그대로 프로세스를 죽인다. 해당 패킷만 버리고
+  // 트랙·세션은 살려서 녹음이 끊기지 않게 한다.
+  decoder.on("error", (e) =>
+    console.warn(`  ⚠️ [${safe}] opus 디코드 스킵: ${e.message}`),
+  );
+  opusStream.on("error", (e) =>
+    console.warn(`  ⚠️ [${safe}] opus 스트림 오류: ${e.message}`),
+  );
+
+  // pipe 의 기본 동작은 소스 종료 시 디코더를 end 시키지만, 에러는
+  // 전파하지 않으므로 위에서 양쪽에 직접 핸들러를 달았다.
   opusStream.pipe(decoder);
   session.users.set(userId, track);
   console.log(`  🎙️  트랙 시작: ${filePath}`);
